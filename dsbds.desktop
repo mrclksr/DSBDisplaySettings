@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=DSBDisplaySettings
+Exec=dsbds
+Icon=video-display
+Terminal=false
+StartupNotify=false
+Type=Application
+Categories=Settings;System;Utility;Application
+
