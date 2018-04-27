@@ -396,6 +396,7 @@ dsbds_set_gamma_chan(dsbds_scr *scr, int output, int chan, double val)
 	XRRSetCrtcGamma(scr->display,
 	    scr->outputs[output]->output_info->crtc, gamma);
 	XFree(gamma);
+	(void)XFlush(scr->display);
 
 	return (0);
 }
@@ -431,6 +432,7 @@ dsbds_set_brightness(dsbds_scr *scr, int output, double brightness)
 	    scr->outputs[output]->output_info->crtc, gamma);
 	scr->outputs[output]->brightness = brightness;
 	XFree(gamma);
+	(void)XFlush(scr->display);
 }
 
 void
@@ -442,6 +444,7 @@ dsbds_set_blanktime(dsbds_scr *scr, int timeout)
 	    &exposures);
 	XSetScreenSaver(scr->display, timeout * 60, interval, blanking,
 	    exposures);
+	(void)XFlush(scr->display);
 }
 
 int
