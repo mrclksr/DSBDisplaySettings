@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <locale.h>
 #include <err.h>
 
 #include "../libdsbds.h"
@@ -49,6 +50,8 @@ main(int argc, char *argv[])
 	double	  brightness, gamma[3];
 	Display	  *d;
 	dsbds_scr *scr;
+
+	(void)setlocale(LC_ALL, "");
 
 	Bflag = bflag = dflag = gflag = lflag = mflag = false;
 	while ((ch = getopt(argc, argv, "B:b:d:g:l:m:")) != -1) {
@@ -111,8 +114,9 @@ main(int argc, char *argv[])
 	}
 	if (Bflag)
 		dsbds_set_blanktime(scr, blanktime);
-	if (bflag)
+	if (bflag) {
 		dsbds_set_brightness(scr, output, brightness);
+	}
 	if (dflag) {
 		dsbds_set_dpms_enabled(scr, dpms[0] != 0 ? true : false);
 		dsbds_set_dpms_timeouts(scr, dpms[1], dpms[2], dpms[3]);
@@ -129,6 +133,7 @@ main(int argc, char *argv[])
 	}
 	if (mflag)
 		dsbds_set_mode(scr, output, mode);
+
 	return (EXIT_SUCCESS);
 }
 
