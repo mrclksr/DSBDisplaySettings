@@ -45,6 +45,7 @@ Blanktime::Blanktime(const QString &title, dsbds_scr *scr, QWidget *parent)
 
 	hbox->addWidget(label);
 	hbox->addWidget(sb);
+	hbox->addStretch(1);
 	connect(sb, SIGNAL(valueChanged(int)), this, SLOT(setBlanktime(int)));
 
 	setLayout(hbox);
