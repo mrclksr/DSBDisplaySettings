@@ -5,5 +5,5 @@ Icon=video-display
 Terminal=false
 StartupNotify=false
 Type=Application
-Categories=Settings;System;Utility;Application
+Categories=Settings;DesktopSettings;
 
