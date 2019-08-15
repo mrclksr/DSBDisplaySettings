@@ -35,8 +35,11 @@ class Output : public QWidget
 	Q_OBJECT
 public:
 	Output(dsbds_scr *scr, int output, QWidget *parent = 0);
-private slots:
 	void update();
+signals:
+	void changed();
+private slots:
+	void emitChanged();
 private:
 	int	   output;
 	Mode	   *mode;

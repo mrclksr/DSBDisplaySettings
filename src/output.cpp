@@ -42,8 +42,13 @@ Output::Output(dsbds_scr *scr, int output, QWidget *parent) : QWidget(parent) {
 
 	setLayout(grid);
 
-	connect(onOff, SIGNAL(changed()), this, SLOT(update()));
-	connect(mode, SIGNAL(changed()), this, SLOT(update()));
+	connect(onOff, SIGNAL(changed()), this, SLOT(emitChanged()));
+	connect(mode, SIGNAL(changed()), this, SLOT(emitChanged()));
+}
+
+void Output::emitChanged()
+{
+	emit changed();
 }
 
 void Output::update()
@@ -51,4 +56,5 @@ void Output::update()
 	mode->update();
 	brightness->update();
 	gamma->update();
+	onOff->update();
 }
