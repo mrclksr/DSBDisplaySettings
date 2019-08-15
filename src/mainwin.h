@@ -37,11 +37,12 @@ class MainWin : public QMainWindow
 public:
 	MainWin(QWidget *parent = 0);
 
-public slots:
+private slots:
 	void quit();
 	void quitSlot();
 	void saveSlot();
 	void closeEvent(QCloseEvent *event);
+	void updateOutputs();
 private:
 	void createOutputList();
 	void createTabs();

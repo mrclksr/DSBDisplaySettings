@@ -116,6 +116,7 @@ MainWin::createOutputList()
 	for (int i = 0; i < dsbds_output_count(scr); i++) {
 		Output *op = new Output(scr, i, this);
 		outputs.append(op);
+		connect(op, SIGNAL(changed()), this, SLOT(updateOutputs()));
 	}
 }
 
@@ -145,6 +146,13 @@ void
 MainWin::quit()
 {
 	QApplication::quit();
+}
+
+void
+MainWin::updateOutputs()
+{
+	for (int i = 0; i < outputs.count(); i++)
+		outputs.at(i)->update();
 }
 
 void
