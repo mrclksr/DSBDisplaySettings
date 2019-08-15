@@ -46,12 +46,12 @@
 
 #define LCD_LEVELS_OID		"hw.acpi.video.lcd%d.levels"
 #define LCD_BRIGHTNESS_OID	"hw.acpi.video.lcd%d.brightness"
-#define CMD_XRANDR_MODE		"xrandr --output %s --mode %s --rate %f"
-#define CMD_XRANDR_GAMMA	"xrandr --output %s --gamma %f:%f:%f"
-#define CMD_XRANDR_BRIGHTNESS	"xrandr --output %s --brightness %f"
-#define CMD_XRANDR_ON		"xrandr --output %s --auto"
-#define CMD_XRANDR_OFF		"xrandr --output %s --off"
-#define CMD_XRANDR_INFO		"xrandr --verbose"
+#define CMD_XRANDR_MODE		PATH_XRANDR " --output %s --mode %s --rate %f"
+#define CMD_XRANDR_GAMMA	PATH_XRANDR " --output %s --gamma %f:%f:%f"
+#define CMD_XRANDR_BRIGHTNESS	PATH_XRANDR " --output %s --brightness %f"
+#define CMD_XRANDR_ON		PATH_XRANDR " --output %s --auto"
+#define CMD_XRANDR_OFF		PATH_XRANDR " --output %s --off"
+#define CMD_XRANDR_INFO		PATH_XRANDR " --verbose"
 
 #define CHECKNULL(expr) do {				\
 	if ((expr) == NULL)				\
