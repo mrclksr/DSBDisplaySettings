@@ -24,7 +24,9 @@
 #include <math.h>
 #include <err.h>
 #include <errno.h>
+#include <ctype.h>
 #include <stdio.h>
+#include <locale.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -42,71 +44,233 @@
 #include "libdsbds.h"
 #include "dsbcfg/dsbcfg.h"
 
-#define LCD_LEVELS_OID	   "hw.acpi.video.lcd%d.levels"
-#define LCD_BRIGHTNESS_OID "hw.acpi.video.lcd%d.brightness"
+#define LCD_LEVELS_OID		"hw.acpi.video.lcd%d.levels"
+#define LCD_BRIGHTNESS_OID	"hw.acpi.video.lcd%d.brightness"
+#define CMD_XRANDR_MODE		"xrandr --output %s --mode %s --rate %f"
+#define CMD_XRANDR_GAMMA	"xrandr --output %s --gamma %f:%f:%f"
+#define CMD_XRANDR_BRIGHTNESS	"xrandr --output %s --brightness %f"
+#define CMD_XRANDR_ON		"xrandr --output %s --auto"
+#define CMD_XRANDR_OFF		"xrandr --output %s --off"
+#define CMD_XRANDR_INFO		"xrandr --verbose"
 
-typedef struct dsbds_lvds_info_s {
-	int  unit;
-	int  nlevels;
-	int  *levels;
-} dsbds_lvds_info;
+#define CHECKNULL(expr) do {				\
+	if ((expr) == NULL)				\
+		err(1, "Uexpected command output");	\
+} while(0)
+
+typedef struct lvds_info_s {
+	int	    unit;
+	int	    levels[100];
+	size_t	    nlevels;
+} lvds_info;
+
+typedef struct dsbds_mode_s {
+	char	     mode[12];
+	double	     rate;
+} dsbds_mode;
 
 typedef struct dsbds_output_s {
-	int	      nmodes;
-	double        brightness;
-	double        red;
-	double        green;
-	double        blue;
-	RROutput      id;
-	XRRModeInfo   **modes;
-	XRRCrtcInfo   *crtc_info;
-	XRROutputInfo *output_info;
-	dsbds_lvds_info *lvds_info;
+	int	     id;
+	int	     curmode;
+	int	     preferred;
+	bool	     connected;
+	bool	     is_lvds;
+	char	     name[12];
+	size_t	     nmodes;
+	double	     brightness;
+	double	     red;
+	double	     green;
+	double	     blue;
+	lvds_info    lvds;
+	dsbds_mode   modes[24];
 } dsbds_output;
 
-typedef struct dsbds_scr_s {
-	int	 noutputs;
-	Display *display;
-	dsbds_output **outputs;
-	XRRScreenResources *xrr_scr;
-} dsbds_scr;
+struct dsbds_scr_s {
+	int	     screen;
+	size_t	     noutputs;
+	Display	     *display;
+	dsbds_output outputs[64];
+};
 
-static int  update_output(dsbds_scr *, int);
-static int  get_rgbb(dsbds_scr *, int);
-static int *get_lcd_brightness_levels(int, size_t *);
-static XRRModeInfo **get_modes(dsbds_scr *, int, int *);
-static dsbds_lvds_info *init_lvds_info(int);
+static int init_lvds_info(int, lvds_info *);
 
-static const int maxval = (1 << 16) - 1;
+int
+dsbds_update_screen(dsbds_scr *scr)
+{
+	char   ln[1024], *p, *q;
+	bool   found_screen;
+	FILE   *fp;
+	size_t lc, no, mc;
+
+	(void)setlocale(LC_NUMERIC, "C");
+	if ((fp = popen(CMD_XRANDR_INFO, "r")) == NULL)
+		err(1, "popen()");
+	found_screen = false;
+	for (lc = 0, no = -1; fgets(ln, sizeof(ln), fp) != NULL; lc++) {
+		if (strncmp(ln, "Screen", 6) == 0) {
+			if (found_screen)
+				break;
+			CHECKNULL(p = strtok(ln + 7, ":"));
+			if (strtol(p, NULL, 10) == scr->screen)
+				found_screen = true;
+			continue;
+		} else if (!found_screen)
+			continue;
+		if (!isspace(ln[0])) {
+			no++;
+			if (no + 1 >= sizeof(scr->outputs)) {
+				warnx("Max. number of outputs exceeded");
+				return (-1);
+			}
+			scr->noutputs = no + 1;
+			scr->outputs[no].nmodes = 0;
+			scr->outputs[no].curmode   = -1;
+			scr->outputs[no].preferred = -1;
+			CHECKNULL(p = strtok(ln, " "));
+			(void)strncpy(scr->outputs[no].name, p,
+			    sizeof(scr->outputs[no]) - 1);
+			CHECKNULL(p = strtok(NULL, " "));
+			if (strcmp(p, "disconnected") == 0)
+				scr->outputs[no].connected = false;
+			else
+				scr->outputs[no].connected = true;
+		} else if (ln[0] == '\t') {
+			CHECKNULL(p = strtok(ln + 1, " "));
+			if ((q = strtok(NULL, " ")) == NULL)
+				continue;
+			if (strcmp(p, "Identifier:") == 0) {
+				CHECKNULL(p = strtok(q, ":"));
+				scr->outputs[no].id = strtol(p, NULL, 16);
+			} else if (strcmp(p, "Gamma:") == 0) {
+				CHECKNULL(p = strtok(q, ":"));
+				scr->outputs[no].red = strtod(p, NULL);
+				CHECKNULL(p = strtok(NULL, ":"));
+				scr->outputs[no].green = strtod(p, NULL);
+				CHECKNULL(p = strtok(NULL, ":"));
+				scr->outputs[no].blue = strtod(p, NULL);
+			} else if (strcmp(p, "Brightness:") == 0) {
+				scr->outputs[no].brightness = strtod(q, NULL);
+			}
+		} else if (strncmp(ln, "        v:", 10) == 0) {
+			p = ln + strlen(ln);
+			while (p != ln && *p != ' ') {
+				if (isalpha(*p))
+					*p = '\0';
+				p--;
+			}
+			mc = scr->outputs[no].nmodes;
+			if (mc >= sizeof(scr->outputs[no].modes) /
+			    sizeof(scr->outputs[no].modes[0])) {
+				warnx("Max. number of modes exceeded");
+				continue;
+			}
+			scr->outputs[no].modes[mc].rate = strtod(++p, NULL);
+			scr->outputs[no].nmodes++;
+		} else if (strncmp(ln, "        h:", 10) == 0) {
+			continue;
+		} else if (strncmp(ln, "  ", 2) == 0) {
+			for (p = ln + 2; isspace(*p); p++)
+				;
+			for (q = p; *q != '\0' && !isspace(*q); q++)
+				;
+			if (*q == '\0') {
+				warn("Unexpected command output: %s", ln);
+				continue;
+			}	
+			*q++ = '\0';
+			mc = scr->outputs[no].nmodes;
+			if (mc >= sizeof(scr->outputs[no].modes) /
+			    sizeof(scr->outputs[no].modes[0])) {
+				warnx("Max. number of modes exceeded");
+				continue;
+			}
+			(void)strncpy(scr->outputs[no].modes[mc].mode, p,
+			    sizeof(scr->outputs[no].modes[mc].mode));
+			if (strstr(q, "*current") != NULL)
+				scr->outputs[no].curmode = mc;
+			if (strstr(q, "preferred") != NULL)
+				scr->outputs[no].preferred = mc;
+		}
+	}
+	(void)fclose(fp);
+	if (!found_screen) {
+		warnx("Couldn't find screen %d", scr->screen);
+		return (-1);
+	}
+	return (0);
+}
+
+dsbds_scr *
+dsbds_init_screen(Display *display)
+{
+	size_t	  i, j;
+	dsbds_scr *scr;
+
+	if ((scr = malloc(sizeof(dsbds_scr))) == NULL)
+		return (NULL);
+	(void)memset(scr, 0, sizeof(dsbds_scr));
+	scr->screen  = XDefaultScreen(display);
+	scr->display = display;
+	if (dsbds_update_screen(scr) != 0) {
+		free(scr);
+		return (NULL);
+	}
+	for (i = j = 0; i < scr->noutputs; i++) {
+		if (strncmp(scr->outputs[i].name, "LVDS", 4) != 0)
+			continue;
+		(void)init_lvds_info(j++, &scr->outputs[i].lvds);
+	}
+	return (scr);
+}
 
 int
 dsbds_set_mode(dsbds_scr *scr, int output, int mode)
 {
-	Status ret;
+	char cmd[sizeof(CMD_XRANDR_MODE) + 42];
+	
+	if (output < 0 || (size_t)output > scr->noutputs)
+		return (-1);
+	if (mode < 0) {
+		if (dsbds_set_off(scr, output) == 0)
+			return (0);
+		return (-1);
+	} else if ((size_t)mode > scr->outputs[output].nmodes)
+		return (-1);
+	(void)setlocale(LC_NUMERIC, "C");
+	(void)snprintf(cmd, sizeof(cmd) - 1,
+	    CMD_XRANDR_MODE,
+	    scr->outputs[output].name,
+	    scr->outputs[output].modes[mode].mode,
+	    scr->outputs[output].modes[mode].rate);
+	if (system(cmd) == 0) {
+		dsbds_update_screen(scr);
+		return (0);
+	}
+	return (-1);
+}
 
-	XGrabServer(scr->display);
-	ret = XRRSetCrtcConfig(scr->display,
-		scr->xrr_scr,
-		scr->outputs[output]->output_info->crtc,
-		scr->xrr_scr->timestamp,
-		scr->outputs[output]->crtc_info->x, 
-		scr->outputs[output]->crtc_info->y,
-		scr->outputs[output]->modes[mode]->id,
-		scr->outputs[output]->crtc_info->rotation,
-		scr->outputs[output]->crtc_info->outputs,
-		scr->outputs[output]->crtc_info->noutput);
-	XUngrabServer(scr->display);
-	(void)update_output(scr, output);
-
-	return (ret != RRSetConfigSuccess ? -1 : 0);
+void
+dsbds_set_brightness(dsbds_scr *scr, int output, double brightness)
+{
+	char cmd[sizeof(CMD_XRANDR_BRIGHTNESS) + 33];
+	
+	if (output < 0 || (size_t)output > scr->noutputs ||
+	    brightness < 0 || brightness > 1)
+		return;
+	(void)setlocale(LC_NUMERIC, "C");
+	(void)snprintf(cmd, sizeof(cmd) - 1,
+	    CMD_XRANDR_BRIGHTNESS,
+	    scr->outputs[output].name, brightness);
+	if (system(cmd) == 0)
+		scr->outputs[output].brightness = brightness;
 }
 
 inline int
 dsbds_mode_count(dsbds_scr *scr, int output)
 {
-	if (scr == NULL || output < 0 || output > scr->noutputs)
+	if (scr == NULL || output < 0 || (size_t)output > scr->noutputs)
 		return (-1);
-	return (scr->outputs[output]->nmodes);
+	return (scr->outputs[output].nmodes);
 }
 
 inline int
@@ -117,130 +281,57 @@ dsbds_output_count(dsbds_scr *scr)
 	return (scr->noutputs);
 }
 
-dsbds_scr *
-dsbds_init_screen(Display *display)
-{
-	int	      i, j;
-	dsbds_scr    *scr;
-	dsbds_output *tmp;
-	XRRScreenResources *sr;
-
-	sr = XRRGetScreenResources(display, DefaultRootWindow(display));
-	if (sr == NULL)
-		return (NULL);
-	if ((scr = malloc(sizeof(dsbds_scr))) == NULL)
-		return (NULL);
-	scr->outputs = malloc(sr->noutput * sizeof(dsbds_output **));
-	if (scr->outputs == NULL) {
-		free(scr);
-		return (NULL);
-	}
-	scr->xrr_scr  = sr;
-	scr->display  = display;
-	scr->noutputs = sr->noutput;
-	for (i = 0; i < sr->noutput; i++) {
-		if ((scr->outputs[i] = malloc(sizeof(dsbds_output))) == NULL)
-			goto error;
-		scr->outputs[i]->id	     = sr->outputs[i];
-		scr->outputs[i]->lvds_info   = NULL;
-		scr->outputs[i]->crtc_info   = NULL;
-		scr->outputs[i]->modes	     = NULL;
-		scr->outputs[i]->nmodes	     = 0;
-		scr->outputs[i]->output_info = XRRGetOutputInfo(display, sr,
-		    sr->outputs[i]);
-		scr->noutputs = sr->noutput;
-		if (scr->outputs[i]->output_info->connection == RR_Connected) {
-			scr->outputs[i]->modes = get_modes(scr, i,
-			    &scr->outputs[i]->nmodes);
-			scr->outputs[i]->crtc_info =
-			    XRRGetCrtcInfo(display, sr,
-				scr->outputs[i]->output_info->crtc);
-			get_rgbb(scr, i);
-		}
-		/* Sort outputs */
-		j = 0;
-		while (j < i) {
-			if (strcmp(scr->outputs[j]->output_info->name,
-			    scr->outputs[j + 1]->output_info->name) > 0) {
-				tmp = scr->outputs[j];
-				scr->outputs[j] = scr->outputs[j + 1];
-				scr->outputs[j + 1] = tmp;
-				if (--j < 0)
-					j = 0;
-			} else
-				j++;
-		}
-	}
-	for (i = j = 0; i < scr->noutputs; i++) {
-		if (strncmp(scr->outputs[i]->output_info->name, "LVDS", 4) != 0)
-			continue;
-		scr->outputs[i]->lvds_info = init_lvds_info(j++);
-	}
-	return (scr);
-error:
-	for (i = 0; i < sr->noutput; i++) {
-		free(scr->outputs[i]);
-		free(scr->outputs[i]->lvds_info);
-	}
-	free(scr);
-
-	return (NULL);
-}
-
 const char *
 dsbds_output_name(dsbds_scr *scr, int output)
 {
-	if (scr == NULL || output < 0 || output > scr->noutputs)
+	if (scr == NULL || output < 0 || (size_t)output > scr->noutputs)
 		return (NULL);
-	return (scr->outputs[output]->output_info->name);
+	return (scr->outputs[output].name);
 }
 
 bool
 dsbds_connected(dsbds_scr *scr, int output)
 {
-	if (scr == NULL || output < 0 || output > scr->noutputs)
+	if (scr == NULL || output < 0 || (size_t)output > scr->noutputs)
 		return (false);
-	if (scr->outputs[output]->output_info->connection == RR_Connected)
-		return (true);
-	return (false);
+	return (scr->outputs[output].connected);
 }
 
 bool
+dsbds_enabled(dsbds_scr *scr, int output)
+{
+	if (scr == NULL || output < 0 || (size_t)output > scr->noutputs)
+		return (false);
+	return (scr->outputs[output].curmode == -1 ? false : true);
+}
+	
+bool
 dsbds_is_lvds(dsbds_scr *scr, int output)
 {
-	if (scr == NULL || output < 0 || output > scr->noutputs)
+	if (scr == NULL || output < 0 || (size_t)output > scr->noutputs)
 		return (false);
-	if (scr->outputs[output]->lvds_info == NULL)
-		return (false);
-	return (true);
+	return (scr->outputs[output].is_lvds);
 }
 
 double
 dsbds_get_rate(dsbds_scr *scr, int output, int modeno)
 {
-	XRRModeInfo *m;
-
 	if (!dsbds_connected(scr, output))
 		return (0);
-	if (modeno < 0 || modeno > scr->outputs[output]->nmodes)
+	if (modeno < 0 || (size_t)modeno > scr->outputs[output].nmodes)
 		return (0);
-	m = scr->outputs[output]->modes[modeno];
-
-	return ((double)m->dotClock / (double)(m->hTotal * m->vTotal));
+	return (scr->outputs[output].modes[modeno].rate);
 }
 
 int
 dsbds_get_modeinfo(dsbds_scr *scr, int output, int modeno,
-	int *width, int *height, double *rate)
+	char ** const mode,  double *rate)
 {
-	XRRModeInfo *m;
-
 	if (!dsbds_connected(scr, output) || modeno < 0 ||
-	    modeno > scr->outputs[output]->nmodes)
+	    (size_t)modeno > scr->outputs[output].nmodes)
 		return (-1);
-	m = scr->outputs[output]->modes[modeno];
-	*width = m->width; *height = m->height;
-	*rate  = (double)m->dotClock / (double)(m->hTotal * m->vTotal);
+	*mode = scr->outputs[output].modes[modeno].mode;
+	*rate = scr->outputs[output].modes[modeno].rate;
 
 	return (0);
 }
@@ -248,191 +339,52 @@ dsbds_get_modeinfo(dsbds_scr *scr, int output, int modeno,
 int
 dsbds_get_mode(dsbds_scr *scr, int output)
 {
-	int i;
-
-	for (i = 0; i < scr->outputs[output]->nmodes; i++) {
-		if (scr->outputs[output]->crtc_info->mode ==
-		    scr->outputs[output]->modes[i]->id)
-			return (i);
-	}
-	return (-1);
-}
-
-/*
- * Finding information about gamma ramps and the connection between
- * brightness and gamma wasn't that easy. The source code of xrandr
- * helped me a lot here.
- *
- * Thanks to the author(s) of xrandr.
- */
-static int
-get_rgbb(dsbds_scr *scr, int output)
-{
-	int		i, j, size, best_chan, max_idx, last_idx[3];
-	double		b, x0, x1, y0, y1, rgb[3];
-	dsbds_output   *outp;
-	XRRCrtcGamma   *gamma;
-	unsigned short *rp[3];
-
-	if (output < 0 || output > scr->noutputs)
+	if (!dsbds_connected(scr, output))
 		return (-1);
-	outp = scr->outputs[output];
-	if (outp->output_info->connection != RR_Connected)
-		return (-1);
-	size  = XRRGetCrtcGammaSize(scr->display, outp->output_info->crtc);
-	gamma = XRRGetCrtcGamma(scr->display, outp->output_info->crtc);
-	/*
-	 * The values of the gamma ramp represent a gamma curve. Each value y
-	 * of the curve is ideally defined as
-	 *
-	 *   f(x) = y = b * x^g
-	 *
-	 * where b is brightness, g is the gamma parameter, and 0 <= x <= 1.
-	 *
-	 * Calculating gamma:
-	 *
-	 *   g = [ln(y) - ln(b)] / ln(x)
-	 *
-	 * Calculating brightness:
-	 *
-	 *   Ideally, for differet x0, x1 > 0 and f(x0) = y0, f(x1) = y1 we get
-	 *
-	 *     g = [ln(y1) - ln(b)] / ln(x1)
-	 *     g = [ln(y0) - ln(b)] / ln(x0)
-	 *
-	 *   Hence 
-	 *
-	 *     [ln(y1) - ln(b)] / ln(x1) = (ln(y0) - ln(b)) / ln(x0)
-	 *
-	 *   This leads to
-	 *
-	 *     b = exp([ln(y1)ln(x0) - ln(y0)ln(x1)] / (ln(x0) - ln(x1)))
-	 */
-	rp[0] = gamma->red; rp[1] = gamma->green; rp[2] = gamma->blue;
-
-	best_chan = max_idx = 0;
-	for (i = 0; i < 3; i++) {
-		for (j = size - 1; j > 0; j--) {
-			if (rp[i][j] < maxval)
-				break;
-		}
-		last_idx[i] = j;
-		if (j > max_idx) {
-			max_idx   = j;
-			best_chan = i;
-		}
-	}
-	x0 = (double)(max_idx / 2 + 1) / (double)size;
-	y0 = (double)rp[best_chan][max_idx / 2] / maxval;
-	x1 = (double)(max_idx + 1) / (double)size;
-	y1 = (double)rp[best_chan][max_idx] / maxval;
-	if (best_chan + 1 == size) {
-		b = y1;
-	} else {
-		b = exp((log(y1) * log(x0) - log(y0) * log(x1)) /
-		    log(x0 / x1));
-	}
-	if (b > 1.0)
-		b = 1.0;
-	for (i = 0; i < 3; i++) {
-		rgb[i] = log((double)(rp[i][last_idx[i] / 2]) /
-			 (double)maxval / b) /
-			 log((double)((last_idx[i] / 2) + 1) / (double)size);
-	}
-	scr->outputs[output]->red	 = rgb[0];
-	scr->outputs[output]->green	 = rgb[1];
-	scr->outputs[output]->blue	 = rgb[2];
-	scr->outputs[output]->brightness = b;
-
-	return (0);
+	return (scr->outputs[output].curmode);
 }
 
 double
 dsbds_get_brightness(dsbds_scr *scr, int output)
 {
-	return (scr->outputs[output]->brightness);
+	return (scr->outputs[output].brightness);
 }
 
 void
 dsbds_get_gamma(dsbds_scr *scr, int output, double *r, double *g, double *b)
 {
-	*r = scr->outputs[output]->red;
-	*g = scr->outputs[output]->green;
-	*b = scr->outputs[output]->blue;
+	*r = scr->outputs[output].red;
+	*g = scr->outputs[output].green;
+	*b = scr->outputs[output].blue;
 }
 
 int
 dsbds_set_gamma_chan(dsbds_scr *scr, int output, int chan, double val)
 {
-	int		j, size;
-	double		gval;
-	XRRCrtcGamma   *gamma, *cur_gamma;
-	unsigned short *ramp;
+	char   cmd[sizeof(CMD_XRANDR_GAMMA) + 28];
+	double r, g, b;
 
-	cur_gamma = XRRGetCrtcGamma(scr->display,
-	    scr->outputs[output]->output_info->crtc);
-	size = XRRGetCrtcGammaSize(scr->display,
-	    scr->outputs[output]->output_info->crtc);
-	gamma = XRRAllocGamma(size);
-	if (chan == 0) {
-		ramp = gamma->red;
-		scr->outputs[output]->red = val;
-	} else if (chan == 1) {
-		ramp = gamma->green;
-		scr->outputs[output]->green = val;
-	} else {
-		ramp = gamma->blue;
-		scr->outputs[output]->blue = val;
+	if (!dsbds_enabled(scr, output))
+		return (-1);
+	r = scr->outputs[output].red;
+	g = scr->outputs[output].green;
+	b = scr->outputs[output].blue;
+
+	if (chan == 0)
+		r = val;
+	else if (chan == 1)
+		g = val;
+	else
+		b = val;
+	(void)snprintf(cmd, sizeof(cmd) - 1, CMD_XRANDR_GAMMA,
+	    scr->outputs[output].name, r, g, b);
+	if (system(cmd) == 0) {
+		scr->outputs[output].red   = r;
+		scr->outputs[output].green = g;
+		scr->outputs[output].blue  = b;
+		return (0);
 	}
-	gval = 1.0 / (double)val;
-	for (j = 0; j < size; j++) {
-		gamma->red[j]   = cur_gamma->red[j];
-		gamma->green[j] = cur_gamma->green[j];
-		gamma->blue[j]  = cur_gamma->blue[j];
-		ramp[j]		= (uint16_t)(maxval *
-				  scr->outputs[output]->brightness *
-				  pow((double)j / (double)(size - 1), gval));
-	}
-	XRRSetCrtcGamma(scr->display,
-	    scr->outputs[output]->output_info->crtc, gamma);
-	XFree(gamma);
-	(void)XFlush(scr->display);
-
-	return (0);
-}
-
-void
-dsbds_set_brightness(dsbds_scr *scr, int output, double brightness)
-{
-	int	      j, size;
-	double	      _r, _g, _b;
-	XRRCrtcGamma *gamma;
-
-	if (brightness < 0 || brightness > 1.0)
-		return;
-	size = XRRGetCrtcGammaSize(scr->display,
-	       scr->outputs[output]->output_info->crtc);
-	gamma = XRRAllocGamma(size);
-	_r = 1.0 / (double)scr->outputs[output]->red;
-	_g = 1.0 / (double)scr->outputs[output]->green;
-	_b = 1.0 / (double)scr->outputs[output]->blue;
-
-	for (j = 0; j < size; j++) {
-		gamma->red[j]   = (uint16_t)(brightness *
-				  pow((double)j / (double)(size - 1), _r) *
-				  maxval);
-		gamma->green[j] = (uint16_t)(brightness *
-				  pow((double)j / (double)(size - 1), _g) *
-				  maxval);
-		gamma->blue[j]  = (uint16_t)(brightness *
-				  pow((double)j / (double)(size - 1), _b) *
-				  maxval);
-	}
-	XRRSetCrtcGamma(scr->display,
-	    scr->outputs[output]->output_info->crtc, gamma);
-	scr->outputs[output]->brightness = brightness;
-	XFree(gamma);
-	(void)XFlush(scr->display);
+	return (-1);
 }
 
 void
@@ -522,40 +474,71 @@ dsbds_set_blue(dsbds_scr *scr, int output, double val)
 int
 dsbds_set_gamma(dsbds_scr *scr, int output, double gamma)
 {
-	int i;
-	
-	for (i = 0; i < 3; i++) {
-		if (dsbds_set_gamma_chan(scr, output, i, gamma) < 0)
-			return (-1);
+	char cmd[sizeof(CMD_XRANDR_GAMMA) + 28];
+
+	if (!dsbds_enabled(scr, output))
+		return (-1);
+	(void)snprintf(cmd, sizeof(cmd) - 1, CMD_XRANDR_GAMMA,
+	    scr->outputs[output].name, gamma, gamma, gamma);
+	if (system(cmd) == 0) {
+		scr->outputs[output].red   = gamma;
+		scr->outputs[output].green = gamma;
+		scr->outputs[output].blue  = gamma;
+		return (0);
 	}
-	return (0);
+	return (-1);	
 }
 
-#if 0
 int
 dsbds_set_off(dsbds_scr *scr, int output)
 {
-	if (!dsbds_connected(scr, output))
-		return (-1);
+	char cmd[sizeof(CMD_XRANDR_OFF) + 16];
+
+	if (!dsbds_enabled(scr, output))
+		return (0);
+	(void)snprintf(cmd, sizeof(cmd) - 1, CMD_XRANDR_OFF,
+	    scr->outputs[output].name);
+	if (system(cmd) == 0) {
+		dsbds_update_screen(scr);
+		if (!dsbds_enabled(scr, output))
+			return (0);
+	}
+	return (-1);
 }
-#endif
+
+int
+dsbds_set_on(dsbds_scr *scr, int output)
+{
+	char cmd[sizeof(CMD_XRANDR_ON) + 16];
+
+	if (dsbds_enabled(scr, output))
+		return (0);
+	(void)snprintf(cmd, sizeof(cmd) - 1, CMD_XRANDR_ON,
+	    scr->outputs[output].name);
+	if (system(cmd) == 0) {
+		dsbds_update_screen(scr);
+		if (dsbds_enabled(scr, output))
+			return (0);
+	}
+	return (-1);
+}
 
 int
 dsbds_get_lcd_brightness_level(dsbds_scr *scr, int output)
 {
-	int    i, val;
+	int    val;
 	char   oid[sizeof(LCD_BRIGHTNESS_OID)];
-	size_t sz;
+	size_t i, sz;
 
 	if (!dsbds_is_lvds(scr, output))
 		return (-1);
 	sz = sizeof(int);
 	(void)snprintf(oid, sizeof(oid), LCD_BRIGHTNESS_OID,
-	    scr->outputs[output]->lvds_info->unit);
+	    scr->outputs[output].lvds.unit);
 	if (sysctlbyname(oid, &val, &sz, NULL, 0) == -1)
 		return (-1);
-	for (i = 0; i < scr->outputs[output]->lvds_info->nlevels; i++) {
-		if (scr->outputs[output]->lvds_info->levels[i] == val)
+	for (i = 0; i < scr->outputs[output].lvds.nlevels; i++) {
+		if (scr->outputs[output].lvds.levels[i] == val)
 			return (i);
 	}
 	return (-1);
@@ -569,9 +552,9 @@ dsbds_set_lcd_brightness_level(dsbds_scr *scr, int output, int level)
 	if (!dsbds_is_lvds(scr, output))
 		return (-1);
 	(void)snprintf(oid, sizeof(oid), LCD_BRIGHTNESS_OID,
-	    scr->outputs[output]->lvds_info->unit);
+	    scr->outputs[output].lvds.unit);
 	if (sysctlbyname(oid, NULL, NULL,
-	    &scr->outputs[output]->lvds_info->levels[level],
+	    &scr->outputs[output].lvds.levels[level],
 	    sizeof(int)) == -1)
 		return (-1);
 	return (0);
@@ -582,42 +565,24 @@ dsbds_lcd_brightness_count(dsbds_scr *scr, int output)
 {
 	if (!dsbds_is_lvds(scr, output))
 		return (-1);
-	return (scr->outputs[output]->lvds_info->nlevels);
+	return (scr->outputs[output].lvds.nlevels);
 }
 
-static dsbds_lvds_info *
-init_lvds_info(int unit)
+static int
+init_lvds_info(int unit, lvds_info *lvds)
 {
-	int    *levels;
-	size_t	nlevels;
-	dsbds_lvds_info *lvds_info;
-
-	levels = get_lcd_brightness_levels(unit, &nlevels);
-	if (levels == NULL)
-		return (NULL);
-	if ((lvds_info = malloc(sizeof(dsbds_lvds_info))) == NULL)
-		return (NULL);
-	lvds_info->unit = unit; lvds_info->levels = levels;
-	lvds_info->nlevels = nlevels;
-
-	return (lvds_info);
-}
-
-static int *
-get_lcd_brightness_levels(int lcd, size_t *nlevels)
-{
-	int    buf[100], *levels, i, tmp;
+	int    buf[100], tmp;
 	char   oid[sizeof(LCD_LEVELS_OID)];
 	bool   sorted;
-	size_t n;
+	size_t n, i;
 
 	n = sizeof(buf);
-	(void)snprintf(oid, sizeof(oid), LCD_LEVELS_OID, lcd);
+	(void)snprintf(oid, sizeof(oid), LCD_LEVELS_OID, unit);
 	if (sysctlbyname(oid, buf, &n, NULL, 0) == -1)
-		return (NULL);
+		return (-1);
 	for (sorted = false; !sorted;) {
 		sorted = true;
-		for (i = 0; i < (int)(n / sizeof(int) - 1); i++) {
+		for (i = 0; i < n / sizeof(int) - 1; i++) {
 			if (buf[i] > buf[i + 1]) {
 				sorted = false;
 				tmp = buf[i]; buf[i] = buf[i + 1];
@@ -625,61 +590,10 @@ get_lcd_brightness_levels(int lcd, size_t *nlevels)
 			}
 		}
 	}
-	if ((levels = malloc(n)) == NULL)
-		return (NULL);
-	*nlevels = n / sizeof(int);
-	for (i = 0; i < (int)*nlevels; i++)
-		levels[i] = buf[i];
-
-	return (levels);
-}
-
-static XRRModeInfo **
-get_modes(dsbds_scr *scr, int output, int *nmodes)
-{
-	int	      i, j, n;
-	RRMode	      mode;
-	XRRModeInfo **modev;
-
-	modev = malloc(scr->outputs[output]->output_info->nmode *
-	    sizeof(XRRModeInfo **));
-	if (modev == NULL)
-		return (NULL);
-	for (i = n = 0; i < scr->outputs[output]->output_info->nmode; i++) {
-		mode = scr->outputs[output]->output_info->modes[i];
-		for (j = 0; j < scr->xrr_scr->nmode; j++) {
-			if (mode != scr->xrr_scr->modes[j].id)
-				continue;
-			modev[n++] = &scr->xrr_scr->modes[j];
-		}
-	}
-	*nmodes = n;
-
-	return (modev);
-}
-
-static int
-update_output(dsbds_scr *scr, int output)
-{
-	XRRCrtcInfo   *crtc_info;
-	XRROutputInfo *output_info;
-
-	output_info = XRRGetOutputInfo(scr->display, scr->xrr_scr,
-	    scr->xrr_scr->outputs[output]);
-	crtc_info = XRRGetCrtcInfo(scr->display, scr->xrr_scr,
-	    scr->outputs[output]->output_info->crtc);
-	if (output_info == NULL || crtc_info == NULL) {
-		if (output_info != NULL)
-			XRRFreeOutputInfo(output_info);
-		if (crtc_info != NULL)
-			XRRFreeCrtcInfo(crtc_info);
-		return (-1);
-	}
-	XRRFreeOutputInfo(scr->outputs[output]->output_info);
-	XRRFreeCrtcInfo(scr->outputs[output]->crtc_info);
-	scr->outputs[output]->output_info  = output_info;
-	scr->outputs[output]->crtc_info = crtc_info;
-
+	lvds->unit    = unit;
+	lvds->nlevels = n / sizeof(int);
+	for (i = 0; i < lvds->nlevels; i++)
+		lvds->levels[i] = buf[i];
 	return (0);
 }
 
@@ -770,6 +684,7 @@ dsbds_save_settings(dsbds_scr *scr)
 	char *tmpath, *topath;
 	FILE *fp;
 
+	(void)setlocale(LC_NUMERIC, "C");
 	if ((fp = open_tempfile(&tmpath)) == NULL)
 		return (-1);
 	if ((topath = get_script_path(NULL)) == NULL)
@@ -787,19 +702,19 @@ dsbds_save_settings(dsbds_scr *scr)
 			    "%s -b %f -m %d -l %d -g %f:%f:%f %s\n",
 			    PATH_BACKEND,
 			    dsbds_get_brightness(scr, i),
-			    dsbds_get_mode(scr, i),
+			    dsbds_enabled(scr, i) ? dsbds_get_mode(scr, i) : -1,
 			    dsbds_get_lcd_brightness_level(scr, i),
-			    scr->outputs[i]->red, scr->outputs[i]->green,
-			    scr->outputs[i]->blue,
+			    scr->outputs[i].red, scr->outputs[i].green,
+			    scr->outputs[i].blue,
 			    dsbds_output_name(scr, i));
 		} else {
 			ret = fprintf(fp,
 			    "%s -b %f -m %d -g %f:%f:%f %s\n",
 			    PATH_BACKEND,
 			    dsbds_get_brightness(scr, i),
-			    dsbds_get_mode(scr, i),
-			    scr->outputs[i]->red, scr->outputs[i]->green,
-			    scr->outputs[i]->blue,
+			    dsbds_enabled(scr, i) ? dsbds_get_mode(scr, i) : -1,
+			    scr->outputs[i].red, scr->outputs[i].green,
+			    scr->outputs[i].blue,
 			    dsbds_output_name(scr, i));
 		}
 		if (ret < 0) {
@@ -818,4 +733,3 @@ dsbds_save_settings(dsbds_scr *scr)
 
 	return (ret);
 }
-
