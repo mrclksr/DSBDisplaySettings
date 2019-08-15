@@ -3,7 +3,7 @@ include(../../defs.inc)
 TEMPLATE     = app
 TARGET	     = $${BACKEND}
 SOURCES	    += dsbds_backend.c ../libdsbds.c ../dsbcfg/dsbcfg.c
-LIBS        += -lX11 -lXxf86vm -lXext -lXrandr
+LIBS        += -lX11 -lXxf86vm -lXext
 INCLUDEPATH += lib .
 
 isEmpty(PORTS) {
