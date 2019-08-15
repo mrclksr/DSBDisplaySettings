@@ -63,9 +63,9 @@ Gamma::Gamma(const QString &title, dsbds_scr *scr, int output, QWidget *parent)
 void Gamma::update()
 {
 	dsbds_get_gamma(scr, output, &red, &green, &blue);
-	redSl->setVal(red);
-	greenSl->setVal(green);
-	blueSl->setVal(blue);
+	redSl->setVal((int)(red * 10));
+	greenSl->setVal((int)(green * 10));
+	blueSl->setVal((int)(blue * 10));
 }
 
 void Gamma::setGamma(int val)
