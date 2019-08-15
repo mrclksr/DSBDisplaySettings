@@ -34,6 +34,7 @@ class Mode : public QGroupBox
 public:
 	Mode(const QString &title, dsbds_scr *scr, int output,
 		QWidget *parent = 0);
+	void update();
 signals:
 	void changed();
 private slots:
