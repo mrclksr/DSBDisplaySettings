@@ -40,12 +40,13 @@ Brightness::Brightness(const QString &title, dsbds_scr *scr, int output,
 	slider = new Slider(Qt::Horizontal, QString(tr("Software brightness")),
 			    0, 100, (int)(brightness * 100), 1);
 	QVBoxLayout *vbox = new QVBoxLayout(parent);
-
+	vbox->addStretch(1);
 	if (dsbds_is_lvds(scr, output))
 		vbox->addWidget(new LCDBrightness(scr, output));
 	connect(slider, SIGNAL(valChanged(int)), this,
 	    SLOT(setBrightness(int)));
 	vbox->addWidget(slider);
+	vbox->addStretch(1);
 	setLayout(vbox);
 }
 
@@ -58,6 +59,6 @@ void Brightness::setBrightness(int value)
 void Brightness::update()
 {
 	brightness = dsbds_get_brightness(scr, output);
-	slider->setVal(brightness);
+	slider->setVal((int)(brightness * 100));
 }
 
