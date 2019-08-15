@@ -69,8 +69,7 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent) {
 	QVBoxLayout *vbox = new QVBoxLayout;
 	QPushButton *save = new QPushButton(sicon, tr("&Save"));
 	QPushButton *quit = new QPushButton(qicon, tr("&Quit"));
-       	warnx("%s", PATH_BACKEND);
- 
+
 	bbox->addWidget(save, 1, Qt::AlignRight);
 	bbox->addWidget(quit, 0, Qt::AlignRight);
 	hbox->addWidget(dpms);
