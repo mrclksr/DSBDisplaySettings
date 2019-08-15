@@ -128,7 +128,7 @@ dsbds_update_screen(dsbds_scr *scr)
 			scr->outputs[no].preferred = -1;
 			CHECKNULL(p = strtok(ln, " "));
 			(void)strncpy(scr->outputs[no].name, p,
-			    sizeof(scr->outputs[no]) - 1);
+			    sizeof(scr->outputs[no].name) - 1);
 			CHECKNULL(p = strtok(NULL, " "));
 			if (strcmp(p, "disconnected") == 0)
 				scr->outputs[no].connected = false;
@@ -185,7 +185,7 @@ dsbds_update_screen(dsbds_scr *scr)
 				continue;
 			}
 			(void)strncpy(scr->outputs[no].modes[mc].mode, p,
-			    sizeof(scr->outputs[no].modes[mc].mode));
+			    sizeof(scr->outputs[no].modes[mc].mode) - 1);
 			if (strstr(q, "*current") != NULL)
 				scr->outputs[no].curmode = mc;
 			if (strstr(q, "preferred") != NULL)
