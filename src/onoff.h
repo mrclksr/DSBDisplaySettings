@@ -34,6 +34,7 @@ class OnOff : public QGroupBox
 public:
 	OnOff(const QString &title, dsbds_scr *scr, int output,
 		QWidget *parent = 0);
+	void update();
 signals:
 	void changed();
 private slots:
@@ -44,4 +45,3 @@ private:
 	QCheckBox *cb;
 };
 #endif
-

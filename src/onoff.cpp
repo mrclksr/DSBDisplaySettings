@@ -1,5 +1,4 @@
 #include <QVBoxLayout>
-#include <QDebug>
 
 #include "onoff.h"
 
@@ -14,6 +13,7 @@ OnOff::OnOff(const QString &title, dsbds_scr *scr, int output, QWidget *parent)
 	layout->addWidget(cb);
 	cb->setCheckState(dsbds_enabled(scr, output) ? \
 	    Qt::Checked : Qt::Unchecked);
+	update();
 	connect(cb, SIGNAL(stateChanged(int)), this, SLOT(enableOutput(int)));
 	setLayout(layout);
 }
@@ -32,4 +32,24 @@ void OnOff::enableOutput(int state)
 	    Qt::Checked : Qt::Unchecked);
 	if (ok == 0)
 		emit changed();
+}
+
+void OnOff::update()
+{
+	int nenabled = 0;
+
+	cb->setCheckState(dsbds_enabled(scr, output) ? \
+	    Qt::Checked : Qt::Unchecked);
+
+	//
+	// Don't allow to disable the only enabled output
+	//
+	for (int i = 0; i < dsbds_output_count(scr); i++) {
+		if (dsbds_enabled(scr, i))
+			nenabled++;
+	}
+	if (nenabled < 2 && dsbds_enabled(scr, output))
+		cb->setEnabled(false);
+	else
+		cb->setEnabled(true);
 }
