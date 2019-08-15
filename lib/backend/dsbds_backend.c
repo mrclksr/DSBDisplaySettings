@@ -51,7 +51,7 @@ main(int argc, char *argv[])
 	Display	  *d;
 	dsbds_scr *scr;
 
-	(void)setlocale(LC_ALL, "");
+	(void)setlocale(LC_NUMERIC, "C");
 
 	Bflag = bflag = dflag = gflag = lflag = mflag = false;
 	while ((ch = getopt(argc, argv, "B:b:d:g:l:m:")) != -1) {
