@@ -32,8 +32,7 @@
 Mode::Mode(const QString &title, dsbds_scr *scr, int output,
 	QWidget *parent) : QGroupBox(title, parent)
 {
-	int    w, h;
-	char   buf[64];
+	char   buf[64], *mode;
 	double r;
 
 	this->scr    = scr;
@@ -42,8 +41,8 @@ Mode::Mode(const QString &title, dsbds_scr *scr, int output,
 
 	nmodes = dsbds_mode_count(scr, output);
 	for (int i = 0; i < nmodes; i++) {
-		dsbds_get_modeinfo(scr, output, i, &w, &h, &r);
-		(void)snprintf(buf, sizeof(buf), "%dx%d @ %.2f", w, h, r);
+		dsbds_get_modeinfo(scr, output, i, &mode, &r);
+		(void)snprintf(buf, sizeof(buf), "%s @ %.2f", mode, r);
 		modes.append(buf);
 	}
 	cbox		  = new QComboBox();
@@ -60,8 +59,20 @@ Mode::Mode(const QString &title, dsbds_scr *scr, int output,
 
 void Mode::setMode()
 {
+	int mode;
 	dsbds_set_mode(scr, output, cbox->currentIndex());
-	cbox->setCurrentIndex(dsbds_get_mode(scr, output));
-	emit changed();
+	mode = dsbds_get_mode(scr, output);
+	if (mode != -1) {
+		cbox->setCurrentIndex(mode);
+		emit changed();
+	}
 }
 
+void Mode::update()
+{
+	int mode = dsbds_get_mode(scr, output);
+
+	if (mode == -1)
+		return;
+	cbox->setCurrentIndex(mode);
+}
