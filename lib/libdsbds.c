@@ -53,9 +53,9 @@
 #define CMD_XRANDR_OFF		PATH_XRANDR " --output %s --off"
 #define CMD_XRANDR_INFO		PATH_XRANDR " --verbose"
 
-#define CHECKNULL(expr) do {				\
-	if ((expr) == NULL)				\
-		err(1, "Uexpected command output");	\
+#define CHECKNULL(expr) do {					\
+	if ((expr) == NULL)					\
+		err(EXIT_FAILURE, "Uexpected command output");	\
 } while(0)
 
 typedef struct lvds_info_s {
@@ -92,112 +92,21 @@ struct dsbds_scr_s {
 	dsbds_output outputs[64];
 };
 
+static int update_screen(dsbds_scr *s);
 static int init_lvds_info(int, lvds_info *);
 
 int
 dsbds_update_screen(dsbds_scr *scr)
 {
-	char   ln[1024], *p, *q;
-	bool   found_screen;
-	FILE   *fp;
-	size_t lc, no, mc;
+	int error, tries = 3;
 
-	(void)setlocale(LC_NUMERIC, "C");
-	if ((fp = popen(CMD_XRANDR_INFO, "r")) == NULL)
-		err(1, "popen(%s)", CMD_XRANDR_INFO);
-	found_screen = false;
-	for (lc = 0, no = -1; fgets(ln, sizeof(ln), fp) != NULL; lc++) {
-		if (strncmp(ln, "Screen", 6) == 0) {
-			if (found_screen)
-				break;
-			CHECKNULL(p = strtok(ln + 7, ":"));
-			if (strtol(p, NULL, 10) == scr->screen)
-				found_screen = true;
-			continue;
-		} else if (!found_screen)
-			continue;
-		if (!isspace(ln[0])) {
-			no++;
-			if (no + 1 >= sizeof(scr->outputs)) {
-				warnx("Max. number of outputs exceeded");
-				return (-1);
-			}
-			scr->noutputs = no + 1;
-			scr->outputs[no].nmodes = 0;
-			scr->outputs[no].curmode   = -1;
-			scr->outputs[no].preferred = -1;
-			CHECKNULL(p = strtok(ln, " "));
-			(void)strncpy(scr->outputs[no].name, p,
-			    sizeof(scr->outputs[no].name) - 1);
-			CHECKNULL(p = strtok(NULL, " "));
-			if (strcmp(p, "disconnected") == 0)
-				scr->outputs[no].connected = false;
-			else
-				scr->outputs[no].connected = true;
-		} else if (ln[0] == '\t') {
-			CHECKNULL(p = strtok(ln + 1, " "));
-			if ((q = strtok(NULL, " ")) == NULL)
-				continue;
-			if (strcmp(p, "Identifier:") == 0) {
-				CHECKNULL(p = strtok(q, ":"));
-				scr->outputs[no].id = strtol(p, NULL, 16);
-			} else if (strcmp(p, "Gamma:") == 0) {
-				CHECKNULL(p = strtok(q, ":"));
-				scr->outputs[no].red = strtod(p, NULL);
-				CHECKNULL(p = strtok(NULL, ":"));
-				scr->outputs[no].green = strtod(p, NULL);
-				CHECKNULL(p = strtok(NULL, ":"));
-				scr->outputs[no].blue = strtod(p, NULL);
-			} else if (strcmp(p, "Brightness:") == 0) {
-				scr->outputs[no].brightness = strtod(q, NULL);
-			}
-		} else if (strncmp(ln, "        v:", 10) == 0) {
-			p = ln + strlen(ln);
-			while (p != ln && *p != ' ') {
-				if (isalpha(*p))
-					*p = '\0';
-				p--;
-			}
-			mc = scr->outputs[no].nmodes;
-			if (mc >= sizeof(scr->outputs[no].modes) /
-			    sizeof(scr->outputs[no].modes[0])) {
-				warnx("Max. number of modes exceeded");
-				continue;
-			}
-			scr->outputs[no].modes[mc].rate = strtod(++p, NULL);
-			scr->outputs[no].nmodes++;
-		} else if (strncmp(ln, "        h:", 10) == 0) {
-			continue;
-		} else if (strncmp(ln, "  ", 2) == 0) {
-			for (p = ln + 2; isspace(*p); p++)
-				;
-			for (q = p; *q != '\0' && !isspace(*q); q++)
-				;
-			if (*q == '\0') {
-				warn("Unexpected command output: %s", ln);
-				continue;
-			}	
-			*q++ = '\0';
-			mc = scr->outputs[no].nmodes;
-			if (mc >= sizeof(scr->outputs[no].modes) /
-			    sizeof(scr->outputs[no].modes[0])) {
-				warnx("Max. number of modes exceeded");
-				continue;
-			}
-			(void)strncpy(scr->outputs[no].modes[mc].mode, p,
-			    sizeof(scr->outputs[no].modes[mc].mode) - 1);
-			if (strstr(q, "*current") != NULL)
-				scr->outputs[no].curmode = mc;
-			if (strstr(q, "preferred") != NULL)
-				scr->outputs[no].preferred = mc;
-		}
+	while (tries-- > 0) {
+		error = update_screen(scr);
+		if (error <= 0)
+			return (error);
+		(void)usleep(50000);
 	}
-	(void)pclose(fp);
-	if (!found_screen) {
-		warnx("Couldn't find screen %d", scr->screen);
-		return (-1);
-	}
-	return (0);
+	err(EXIT_FAILURE, "xrandr command failed too often. Giving up");
 }
 
 dsbds_scr *
@@ -675,6 +584,116 @@ open_tempfile(char **path)
 	*path = p;
 
 	return (fp);
+}
+
+static int
+update_screen(dsbds_scr *scr)
+{
+	int	error;
+	char   ln[1024], *p, *q;
+	bool   found_screen;
+	FILE   *fp;
+	size_t lc, no, mc;
+
+	(void)setlocale(LC_NUMERIC, "C");
+	if ((fp = popen(CMD_XRANDR_INFO, "r")) == NULL)
+		err(EXIT_FAILURE, "popen(%s)", CMD_XRANDR_INFO);
+	found_screen = false;
+	for (lc = 0, no = -1; fgets(ln, sizeof(ln), fp) != NULL; lc++) {
+		if (strncmp(ln, "Screen", 6) == 0) {
+			if (found_screen)
+				break;
+			CHECKNULL(p = strtok(ln + 7, ":"));
+			if (strtol(p, NULL, 10) == scr->screen)
+				found_screen = true;
+			continue;
+		} else if (!found_screen)
+			continue;
+		if (!isspace(ln[0])) {
+			no++;
+			if (no + 1 >= sizeof(scr->outputs)) {
+				warnx("Max. number of outputs exceeded");
+				return (-1);
+			}
+			scr->noutputs = no + 1;
+			scr->outputs[no].nmodes = 0;
+			scr->outputs[no].curmode   = -1;
+			scr->outputs[no].preferred = -1;
+			CHECKNULL(p = strtok(ln, " "));
+			(void)strncpy(scr->outputs[no].name, p,
+			    sizeof(scr->outputs[no].name) - 1);
+			CHECKNULL(p = strtok(NULL, " "));
+			if (strcmp(p, "disconnected") == 0)
+				scr->outputs[no].connected = false;
+			else
+				scr->outputs[no].connected = true;
+		} else if (ln[0] == '\t') {
+			CHECKNULL(p = strtok(ln + 1, " "));
+			if ((q = strtok(NULL, " ")) == NULL)
+				continue;
+			if (strcmp(p, "Identifier:") == 0) {
+				CHECKNULL(p = strtok(q, ":"));
+				scr->outputs[no].id = strtol(p, NULL, 16);
+			} else if (strcmp(p, "Gamma:") == 0) {
+				CHECKNULL(p = strtok(q, ":"));
+				scr->outputs[no].red = strtod(p, NULL);
+				CHECKNULL(p = strtok(NULL, ":"));
+				scr->outputs[no].green = strtod(p, NULL);
+				CHECKNULL(p = strtok(NULL, ":"));
+				scr->outputs[no].blue = strtod(p, NULL);
+			} else if (strcmp(p, "Brightness:") == 0) {
+				scr->outputs[no].brightness = strtod(q, NULL);
+			}
+		} else if (strncmp(ln, "        v:", 10) == 0) {
+			p = ln + strlen(ln);
+			while (p != ln && *p != ' ') {
+				if (isalpha(*p))
+					*p = '\0';
+				p--;
+			}
+			mc = scr->outputs[no].nmodes;
+			if (mc >= sizeof(scr->outputs[no].modes) /
+			    sizeof(scr->outputs[no].modes[0])) {
+				warnx("Max. number of modes exceeded");
+				continue;
+			}
+			scr->outputs[no].modes[mc].rate = strtod(++p, NULL);
+			scr->outputs[no].nmodes++;
+		} else if (strncmp(ln, "        h:", 10) == 0) {
+			continue;
+		} else if (strncmp(ln, "  ", 2) == 0) {
+			for (p = ln + 2; isspace(*p); p++)
+				;
+			for (q = p; *q != '\0' && !isspace(*q); q++)
+				;
+			if (*q == '\0') {
+				warn("Unexpected command output: %s", ln);
+				continue;
+			}
+			*q++ = '\0';
+			mc = scr->outputs[no].nmodes;
+			if (mc >= sizeof(scr->outputs[no].modes) /
+			    sizeof(scr->outputs[no].modes[0])) {
+				warnx("Max. number of modes exceeded");
+				continue;
+			}
+			(void)strncpy(scr->outputs[no].modes[mc].mode, p,
+			    sizeof(scr->outputs[no].modes[mc].mode) - 1);
+			if (strstr(q, "*current") != NULL)
+				scr->outputs[no].curmode = mc;
+			if (strstr(q, "preferred") != NULL)
+				scr->outputs[no].preferred = mc;
+		}
+	}
+	while ((error = pclose(fp)) == -1) {
+		if (errno != EINTR)
+			err(EXIT_FAILURE, "pclose()");
+	}
+	if (!found_screen) {
+		warnx("Couldn't find screen %d", scr->screen);
+		return (error != 0 ? error : -1);
+	}
+	return (0);
 }
 
 int
