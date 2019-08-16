@@ -104,7 +104,7 @@ dsbds_update_screen(dsbds_scr *scr)
 
 	(void)setlocale(LC_NUMERIC, "C");
 	if ((fp = popen(CMD_XRANDR_INFO, "r")) == NULL)
-		err(1, "popen()");
+		err(1, "popen(%s)", CMD_XRANDR_INFO);
 	found_screen = false;
 	for (lc = 0, no = -1; fgets(ln, sizeof(ln), fp) != NULL; lc++) {
 		if (strncmp(ln, "Screen", 6) == 0) {
