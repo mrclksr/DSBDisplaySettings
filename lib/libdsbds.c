@@ -192,7 +192,7 @@ dsbds_update_screen(dsbds_scr *scr)
 				scr->outputs[no].preferred = mc;
 		}
 	}
-	(void)fclose(fp);
+	(void)pclose(fp);
 	if (!found_screen) {
 		warnx("Couldn't find screen %d", scr->screen);
 		return (-1);
