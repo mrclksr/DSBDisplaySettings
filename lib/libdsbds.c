@@ -218,6 +218,7 @@ dsbds_init_screen(Display *display)
 	for (i = j = 0; i < scr->noutputs; i++) {
 		if (strncmp(scr->outputs[i].name, "LVDS", 4) != 0)
 			continue;
+		scr->outputs[i].is_lvds = true;
 		(void)init_lvds_info(j++, &scr->outputs[i].lvds);
 	}
 	return (scr);
