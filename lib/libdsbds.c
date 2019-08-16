@@ -59,36 +59,36 @@
 } while(0)
 
 typedef struct lvds_info_s {
-	int	    unit;
-	int	    levels[100];
-	size_t	    nlevels;
+	int	      unit;
+	int	      levels[100];
+	size_t	      nlevels;
 } lvds_info;
 
 typedef struct dsbds_mode_s {
-	char	     mode[12];
-	double	     rate;
+	char	      mode[12];
+	double	      rate;
 } dsbds_mode;
 
 typedef struct dsbds_output_s {
-	int	     id;
-	int	     curmode;
-	int	     preferred;
-	bool	     connected;
-	bool	     is_lvds;
-	char	     name[12];
-	size_t	     nmodes;
-	double	     brightness;
-	double	     red;
-	double	     green;
-	double	     blue;
+	int	      id;
+	int	      curmode;
+	int	      preferred;
+	bool	      connected;
+	bool	      is_lvds;
+	char	      name[12];
+	size_t	      nmodes;
+	double	      brightness;
+	double	      red;
+	double	      green;
+	double	      blue;
 	lvds_info    lvds;
 	dsbds_mode   modes[24];
 } dsbds_output;
 
 struct dsbds_scr_s {
-	int	     screen;
-	size_t	     noutputs;
-	Display	     *display;
+	int	      screen;
+	size_t	      noutputs;
+	Display	      *display;
 	dsbds_output outputs[64];
 };
 
