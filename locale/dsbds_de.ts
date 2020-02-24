@@ -28,53 +28,53 @@
 <context>
     <name>MainWin</name>
     <message>
-        <location filename="../src/mainwin.cpp" line="64"/>
+        <location filename="../src/mainwin.cpp" line="66"/>
         <source>DPMS</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="65"/>
+        <location filename="../src/mainwin.cpp" line="67"/>
         <source>Blanktime</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="70"/>
-        <location filename="../src/mainwin.cpp" line="205"/>
+        <location filename="../src/mainwin.cpp" line="72"/>
+        <location filename="../src/mainwin.cpp" line="211"/>
         <source>&amp;Save</source>
         <translation>&amp;Speichern</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="71"/>
+        <location filename="../src/mainwin.cpp" line="73"/>
         <source>&amp;Quit</source>
         <translation>&amp;Beenden</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="164"/>
+        <location filename="../src/mainwin.cpp" line="168"/>
         <source>Saved</source>
         <translation>Gespeichert</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="199"/>
+        <location filename="../src/mainwin.cpp" line="205"/>
         <source>Settings have been changed</source>
         <translation>Einstellungen wurden geändert</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="200"/>
+        <location filename="../src/mainwin.cpp" line="206"/>
         <source>Settings changed</source>
         <translation>Einstellungen geändert</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="201"/>
+        <location filename="../src/mainwin.cpp" line="207"/>
         <source>Do you want to save your changes?</source>
         <translation>Möchten Sie die Änderungen speichern?</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="207"/>
+        <location filename="../src/mainwin.cpp" line="213"/>
         <source>&amp;Quit without saving</source>
         <translation>&amp;Beenden ohne zu speichern</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="208"/>
+        <location filename="../src/mainwin.cpp" line="214"/>
         <source>&amp;Cancel</source>
         <translation>&amp;Abbrechen</translation>
     </message>
@@ -104,18 +104,36 @@
     </message>
     <message>
         <location filename="../src/output.cpp" line="29"/>
+        <source>Scale</source>
+        <translation>Skalieren</translation>
+    </message>
+    <message>
+        <location filename="../src/output.cpp" line="30"/>
         <source>Gamma correction</source>
         <translation>Gamma-Korrektur</translation>
     </message>
     <message>
-        <location filename="../src/output.cpp" line="30"/>
+        <location filename="../src/output.cpp" line="31"/>
         <source>Brightness</source>
         <translation>Helligkeit</translation>
     </message>
     <message>
-        <location filename="../src/output.cpp" line="31"/>
+        <location filename="../src/output.cpp" line="32"/>
         <source>Enable/Disable</source>
         <translation>Aktivieren/Deaktivieren</translation>
+    </message>
+</context>
+<context>
+    <name>Scale</name>
+    <message>
+        <location filename="../src/scale.cpp" line="44"/>
+        <source>=</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../src/scale.cpp" line="45"/>
+        <source>Scale</source>
+        <translation>Skalieren</translation>
     </message>
 </context>
 </TS>
