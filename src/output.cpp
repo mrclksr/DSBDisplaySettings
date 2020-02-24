@@ -36,10 +36,10 @@ Output::Output(dsbds_scr *scr, int output, QWidget *parent) : QWidget(parent) {
 	QGridLayout *grid = new QGridLayout;
 	grid->setColumnStretch(1, 1);
 	grid->setRowStretch(1, 1);
-	grid->addWidget(mode,  0, 0);
+	grid->addWidget(onOff, 0, 0);
+	grid->addWidget(mode,  1, 0);
 	grid->addWidget(gamma,  0, 1, 4, 1);
-	grid->addWidget(scale, 1, 0);
-	grid->addWidget(onOff, 2, 0);
+	grid->addWidget(scale, 2, 0);
 	grid->addWidget(brightness, 3, 0);
 
 	setLayout(grid);
