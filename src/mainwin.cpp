@@ -39,14 +39,16 @@
 struct scr_settings_s {
 	int    lcdbrightness;
 	int    mode;
+	double sx;
+	double sy;
 	double gamma[3];
 	double brightness;
 };
 
 static struct settings_s {
-	int  blanktime;
-	int  dpms[3];
-	bool dpms_on;
+	int    blanktime;
+	int    dpms[3];
+	bool   dpms_on;
 	struct scr_settings_s *ss;
 } settings;
 
@@ -107,6 +109,8 @@ MainWin::updateSettings()
 		    dsbds_get_lcd_brightness_level(scr,i);
 		dsbds_get_gamma(scr, i, &settings.ss[i].gamma[0],
 		    &settings.ss[i].gamma[1], &settings.ss[i].gamma[2]);
+		settings.ss[i].sx = dsbds_get_xscale(scr, i);
+		settings.ss[i].sy = dsbds_get_yscale(scr, i);
 	}
 }
 
@@ -188,7 +192,9 @@ MainWin::quitSlot()
 		    settings.ss[i].gamma[0] != gamma[0] ||
 		    settings.ss[i].gamma[1] != gamma[1] ||
 		    settings.ss[i].gamma[2] != gamma[2] ||
-		    settings.ss[i].mode	    != dsbds_get_mode(scr, i)) {
+		    settings.ss[i].mode	    != dsbds_get_mode(scr, i)   ||
+		    settings.ss[i].sx       != dsbds_get_xscale(scr, i) ||
+		    settings.ss[i].sy       != dsbds_get_yscale(scr, i)) {
 			changed = true;
 		}
 	}

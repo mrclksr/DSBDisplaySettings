@@ -26,6 +26,7 @@
 
 Output::Output(dsbds_scr *scr, int output, QWidget *parent) : QWidget(parent) {
 	mode         = new Mode(QString(tr("Mode")), scr, output);
+	scale	     = new Scale(QString(tr("Scale")), scr, output);
 	gamma        = new Gamma(QString(tr("Gamma correction")), scr, output);
 	brightness   = new Brightness(QString(tr("Brightness")), scr, output);
 	onOff	     = new OnOff(QString(tr("Enable/Disable")), scr, output);
@@ -36,9 +37,10 @@ Output::Output(dsbds_scr *scr, int output, QWidget *parent) : QWidget(parent) {
 	grid->setColumnStretch(1, 1);
 	grid->setRowStretch(1, 1);
 	grid->addWidget(mode,  0, 0);
-	grid->addWidget(gamma,  0, 1, 3, 1);
-	grid->addWidget(onOff, 1, 0);
-	grid->addWidget(brightness, 2, 0);
+	grid->addWidget(gamma,  0, 1, 4, 1);
+	grid->addWidget(scale, 1, 0);
+	grid->addWidget(onOff, 2, 0);
+	grid->addWidget(brightness, 3, 0);
 
 	setLayout(grid);
 

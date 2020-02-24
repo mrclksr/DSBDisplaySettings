@@ -19,6 +19,7 @@ HEADERS += ../lib/libdsbds.h \
            slider.h \
 	   output.h \
 	   onoff.h \
+	   scale.h \
            ../lib/qt-helper/qt-helper.h \
 	   ../lib/dsbcfg/dsbcfg.h
 SOURCES += ../lib/libdsbds.c \
@@ -33,6 +34,7 @@ SOURCES += ../lib/libdsbds.c \
            output.cpp \
            slider.cpp \
 	   onoff.cpp \
+	   scale.cpp \
 	   ../lib/dsbcfg/dsbcfg.c \
            ../lib/qt-helper/qt-helper.cpp
 

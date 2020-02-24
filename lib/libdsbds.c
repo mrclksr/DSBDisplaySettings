@@ -51,6 +51,7 @@
 #define CMD_XRANDR_BRIGHTNESS	PATH_XRANDR " --output %s --brightness %f"
 #define CMD_XRANDR_ON		PATH_XRANDR " --output %s --auto"
 #define CMD_XRANDR_OFF		PATH_XRANDR " --output %s --off"
+#define CMD_XRANDR_SCALE	PATH_XRANDR " --output %s --scale %fx%f"
 #define CMD_XRANDR_INFO		PATH_XRANDR " --verbose"
 
 #define CHECKNULL(expr) do {					\
@@ -59,36 +60,38 @@
 } while(0)
 
 typedef struct lvds_info_s {
-	int	      unit;
-	int	      levels[100];
-	size_t	      nlevels;
+	int	     unit;
+	int	     levels[100];
+	size_t	     nlevels;
 } lvds_info;
 
 typedef struct dsbds_mode_s {
-	char	      mode[12];
-	double	      rate;
+	char	     mode[12];
+	double	     rate;
 } dsbds_mode;
 
 typedef struct dsbds_output_s {
-	int	      id;
-	int	      curmode;
-	int	      preferred;
-	bool	      connected;
-	bool	      is_lvds;
-	char	      name[12];
-	size_t	      nmodes;
-	double	      brightness;
-	double	      red;
-	double	      green;
-	double	      blue;
+	int	     id;
+	int	     curmode;
+	int	     preferred;
+	bool	     connected;
+	bool	     is_lvds;
+	char	     name[12];
+	size_t	     nmodes;
+	double	     sx;
+	double	     sy;
+	double	     brightness;
+	double	     red;
+	double	     green;
+	double	     blue;
 	lvds_info    lvds;
 	dsbds_mode   modes[24];
 } dsbds_output;
 
 struct dsbds_scr_s {
-	int	      screen;
-	size_t	      noutputs;
-	Display	      *display;
+	int	     screen;
+	size_t	     noutputs;
+	Display	     *display;
 	dsbds_output outputs[64];
 };
 
@@ -478,6 +481,40 @@ dsbds_lcd_brightness_count(dsbds_scr *scr, int output)
 	return (scr->outputs[output].lvds.nlevels);
 }
 
+double
+dsbds_get_xscale(dsbds_scr *scr, int output)
+{
+	if (scr == NULL || output < 0 || (size_t)output > scr->noutputs)
+		return (-1);
+	return (scr->outputs[output].sx);
+}
+
+int
+dsbds_set_scale(dsbds_scr *scr, int output, double x, double y)
+{
+	char cmd[sizeof(CMD_XRANDR_SCALE) + 16];
+
+	if (!dsbds_enabled(scr, output))
+		return (0);
+	(void)snprintf(cmd, sizeof(cmd) - 1, CMD_XRANDR_SCALE,
+	    scr->outputs[output].name, x, y);
+	if (system(cmd) == 0) {
+		dsbds_update_screen(scr);
+		if (scr->outputs[output].sx == x &&
+		    scr->outputs[output].sy == y)
+			return (0);
+	}
+	return (-1);
+}
+
+double
+dsbds_get_yscale(dsbds_scr *scr, int output)
+{
+	if (scr == NULL || output < 0 || (size_t)output > scr->noutputs)
+		return (-1);
+	return (scr->outputs[output].sy);
+}
+
 static int
 init_lvds_info(int unit, lvds_info *lvds)
 {
@@ -643,6 +680,18 @@ update_screen(dsbds_scr *scr)
 				scr->outputs[no].blue = strtod(p, NULL);
 			} else if (strcmp(p, "Brightness:") == 0) {
 				scr->outputs[no].brightness = strtod(q, NULL);
+			} else if (strcmp(p, "Transform:") == 0) {
+				CHECKNULL(p = strtok(q, ": "));
+				scr->outputs[no].sx = strtod(p, NULL);
+				if (fgets(ln, sizeof(ln), fp) == NULL) {
+					warn("Unexpected end of output");
+					return (-1);
+				}
+				lc++;
+				CHECKNULL(p = strtok(ln + 1, " "));
+				CHECKNULL(q = strtok(NULL, " "));
+				CHECKNULL(p = strtok(q, " "));
+				scr->outputs[no].sy = strtod(p, NULL);
 			}
 		} else if (strncmp(ln, "        v:", 10) == 0) {
 			p = ln + strlen(ln);
@@ -719,22 +768,24 @@ dsbds_save_settings(dsbds_scr *scr)
 			continue;
 		if (dsbds_is_lvds(scr, i)) {
 			ret = fprintf(fp,
-			    "%s -b %f -m %d -l %d -g %f:%f:%f %s\n",
+			    "%s -b %f -m %d -l %d -g %f:%f:%f -s %fx%f %s\n",
 			    PATH_BACKEND,
 			    dsbds_get_brightness(scr, i),
 			    dsbds_enabled(scr, i) ? dsbds_get_mode(scr, i) : -1,
 			    dsbds_get_lcd_brightness_level(scr, i),
 			    scr->outputs[i].red, scr->outputs[i].green,
 			    scr->outputs[i].blue,
+			    scr->outputs[i].sx, scr->outputs[i].sy,
 			    dsbds_output_name(scr, i));
 		} else {
 			ret = fprintf(fp,
-			    "%s -b %f -m %d -g %f:%f:%f %s\n",
+			    "%s -b %f -m %d -g %f:%f:%f -s %fx%f %s\n",
 			    PATH_BACKEND,
 			    dsbds_get_brightness(scr, i),
 			    dsbds_enabled(scr, i) ? dsbds_get_mode(scr, i) : -1,
 			    scr->outputs[i].red, scr->outputs[i].green,
 			    scr->outputs[i].blue,
+			    scr->outputs[i].sx, scr->outputs[i].sy,
 			    dsbds_output_name(scr, i));
 		}
 		if (ret < 0) {

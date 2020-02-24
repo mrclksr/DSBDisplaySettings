@@ -37,7 +37,8 @@ usage()
 	(void)printf("Usage: dsbds_backend [-B blanktime]"	\
 	    "[-d enable:standby:suspend:off]\n"			\
 	    "       dsbds_backend [-b brightness][-g r:g:b]"	\
-	    "[-l <LCD brightness>] output\n");
+	    "[-l <LCD brightness>]\n"				\
+	    "                     [-s <sx>x<sy>] output\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -45,16 +46,16 @@ int
 main(int argc, char *argv[])
 {
 	int	  ch, blanktime, dpms[4], i, mode, lbrightness, output;
-	bool	  Bflag, bflag, dflag, gflag, lflag, mflag;
+	bool	  Bflag, bflag, dflag, gflag, lflag, mflag, sflag;
 	char	  *p;
-	double	  brightness, gamma[3];
+	double	  brightness, gamma[3], sx, sy;
 	Display	  *d;
 	dsbds_scr *scr;
 
 	(void)setlocale(LC_NUMERIC, "C");
 
-	Bflag = bflag = dflag = gflag = lflag = mflag = false;
-	while ((ch = getopt(argc, argv, "B:b:d:g:l:m:")) != -1) {
+	Bflag = bflag = dflag = gflag = lflag = mflag = sflag = false;
+	while ((ch = getopt(argc, argv, "B:b:d:g:l:m:s:")) != -1) {
 		switch (ch) {
 		case 'B':
 			Bflag = true;
@@ -87,6 +88,21 @@ main(int argc, char *argv[])
 		case 'm':
 			mflag = true;
 			mode = strtol(optarg, NULL, 10);
+			break;
+		case 's':
+			sflag = true;
+			for (i = 0, p = optarg;
+			    ((p = strtok(p, "x"))) != NULL && i < 2;
+			    p = NULL, i++) {
+				if (i == 0)
+					sx = strtod(p, NULL);
+				else
+					sy = strtod(p, NULL);
+			}
+			if (i != 2) {
+				warnx("HERE");
+				usage();
+			}
 			break;
 		case '?':
 		default:
@@ -133,7 +149,8 @@ main(int argc, char *argv[])
 	}
 	if (mflag)
 		dsbds_set_mode(scr, output, mode);
-
+	if (sflag)
+		dsbds_set_scale(scr, output, sx, sy);
 	return (EXIT_SUCCESS);
 }
 

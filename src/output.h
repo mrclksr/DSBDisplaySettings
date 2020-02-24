@@ -29,6 +29,7 @@
 #include "brightness.h"
 #include "mode.h"
 #include "onoff.h"
+#include "scale.h"
 
 class Output : public QWidget
 {
@@ -45,6 +46,7 @@ private:
 	Mode	   *mode;
 	Gamma	   *gamma;
 	OnOff	   *onOff;
+	Scale	   *scale;
 	dsbds_scr  *scr;
 	QComboBox  *cbox;
 	Brightness *brightness;
