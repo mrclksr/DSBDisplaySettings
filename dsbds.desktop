@@ -1,5 +1,6 @@
 [Desktop Entry]
-Name=DSBDisplaySettings
+Name=Display Settings
+Name[de]=Display-Einstellungen
 Exec=dsbds
 Icon=video-display
 Terminal=false
