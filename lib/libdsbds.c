@@ -35,6 +35,7 @@
 #include <sys/sysctl.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <pwd.h>
 #include <X11/extensions/Xinerama.h>
 #include <X11/extensions/xf86vmode.h>
 #include <X11/extensions/dpms.h>
@@ -53,6 +54,8 @@
 #define CMD_XRANDR_OFF		PATH_XRANDR " --output %s --off"
 #define CMD_XRANDR_SCALE	PATH_XRANDR " --output %s --scale %fx%f"
 #define CMD_XRANDR_INFO		PATH_XRANDR " --verbose"
+#define CMD_XRANDR_DPI		PATH_XRANDR " --dpi %d"
+#define CMD_XDPYINFO		PATH_XDPYINFO
 
 #define CHECKNULL(expr) do {					\
 	if ((expr) == NULL)					\
@@ -89,6 +92,7 @@ typedef struct dsbds_output_s {
 } dsbds_output;
 
 struct dsbds_scr_s {
+	int	     dpi;
 	int	     screen;
 	size_t	     noutputs;
 	Display	     *display;
@@ -633,6 +637,7 @@ update_screen(dsbds_scr *scr)
 	size_t lc, no, mc;
 
 	(void)setlocale(LC_NUMERIC, "C");
+	(void)dsbds_get_dpi(scr);
 	if ((fp = popen(CMD_XRANDR_INFO, "r")) == NULL)
 		err(EXIT_FAILURE, "popen(%s)", CMD_XRANDR_INFO);
 	found_screen = false;
@@ -746,6 +751,106 @@ update_screen(dsbds_scr *scr)
 }
 
 int
+dsbds_get_dpi(dsbds_scr *scr)
+{
+	char   ln[64];
+	FILE   *fp;
+	size_t idx, lc;
+
+	(void)setlocale(LC_NUMERIC, "C");
+	if ((fp = popen(CMD_XDPYINFO, "r")) == NULL)
+		err(EXIT_FAILURE, "popen(%s)", CMD_XDPYINFO);
+	scr->dpi = -1;
+	for (lc = 0; fgets(ln, sizeof(ln), fp) != NULL; lc++) {
+		idx = strspn(ln, " ");
+		if (strncmp(ln + idx, "resolution:", 11) != 0)
+			continue;
+		idx += 11;
+		idx += strcspn(ln + idx, "0123456789");
+		scr->dpi = strtol(ln + idx, NULL, 10);
+		break;
+	}
+	(void)fclose(fp);
+	if (scr->dpi == -1)
+		warn("Error parsing %s output", CMD_XDPYINFO);
+	return (scr->dpi);
+}
+
+static int
+write_xdefaults(int dpi)
+{
+	int	      error, fd;
+	bool	      found;
+	size_t	      len;
+	FILE 	      *fp, *tmpfp;
+	char	      *tmpath, *path, *ln;
+	struct passwd *pwd;
+
+	pwd = getpwuid(getuid());
+	endpwent();
+	if (pwd == NULL) {
+		warn("getpwuid(%d)", getuid());
+		return (-1);
+	}
+	len = strlen(pwd->pw_dir) + sizeof("/.Xdefaults") + sizeof(".XXXXX");
+	if ((tmpath = malloc(len)) == NULL)
+		err(EXIT_FAILURE, "malloc()");
+	(void)snprintf(tmpath, len, "%s/X.defaults.XXXXX", pwd->pw_dir);
+
+	len = strlen(pwd->pw_dir) + sizeof("/.Xdefaults");
+	if ((path = malloc(len)) == NULL)
+		err(EXIT_FAILURE, "malloc()");
+	(void)snprintf(path, len, "%s/.Xdefaults", pwd->pw_dir);
+
+	if ((fp = fopen(path, "r")) == NULL && errno != ENOENT)
+		err(EXIT_FAILURE, "fopen(%s)", path);
+	if ((fd = mkstemp(tmpath)) == -1) {
+		warn("mkstemp(%s)", tmpath); free(tmpath);
+		return (-1);
+	}
+	if ((tmpfp = fdopen(fd, "w")) == NULL) {
+		warn("fdopen()"); free(tmpath); (void)close(fd);
+		return (-1);
+	}
+	found = false; error = 0;
+	for (len = 0, ln = NULL; fp != NULL && getline(&ln, &len, fp) > 0;) {
+		if (strncmp(ln, "Xft.dpi:", 8) == 0) {
+			(void)fprintf(tmpfp, "Xft.dpi: %d\n", dpi);
+			found = true;
+		} else
+			(void)fputs(ln, tmpfp);
+	}
+	free(ln);
+	if (!found)
+		(void)fprintf(tmpfp, "Xft.dpi: %d\n", dpi);
+	(void)fclose(tmpfp);
+	if (fp != NULL)
+		(void)fclose(fp);
+	if (rename(tmpath, path) == -1) {
+		warn("rename(%s, %s)", tmpath, path);
+		error = -1;
+	}
+	free(path);
+	free(tmpath);
+
+	return (error);
+
+}
+
+int
+dsbds_set_dpi(dsbds_scr *scr, int dpi)
+{
+	char cmd[sizeof(CMD_XRANDR_DPI) + 16];
+
+	(void)snprintf(cmd, sizeof(cmd), CMD_XRANDR_DPI, dpi);
+	(void)system(cmd);
+	dsbds_get_dpi(scr);
+	if (scr->dpi == dpi)
+		return (0);
+	return (-1);
+}
+
+int
 dsbds_save_settings(dsbds_scr *scr)
 {
 	int  i, ret, dpms[3];
@@ -802,5 +907,5 @@ dsbds_save_settings(dsbds_scr *scr)
 		warn("chmod(%s)", topath);
 	free(tmpath); free(topath);
 
-	return (ret);
+	return (write_xdefaults(scr->dpi));
 }

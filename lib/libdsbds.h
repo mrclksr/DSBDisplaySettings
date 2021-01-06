@@ -51,6 +51,8 @@ extern int    dsbds_set_mode(dsbds_scr *, int, int);
 extern int    dsbds_set_red(dsbds_scr *, int, double);
 extern int    dsbds_set_scale(dsbds_scr *scr, int output, double, double);
 extern int    dsbds_save_settings(dsbds_scr *);
+extern int    dsbds_get_dpi(dsbds_scr *);
+extern int    dsbds_set_dpi(dsbds_scr *, int);
 extern bool   dsbds_connected(dsbds_scr *, int);
 extern bool   dsbds_enabled(dsbds_scr *, int);
 extern bool   dsbds_is_lvds(dsbds_scr *, int);

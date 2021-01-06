@@ -32,6 +32,7 @@
 #include <QVBoxLayout>
 
 #include "mainwin.h"
+#include "dpi.h"
 #include "dpms.h"
 #include "blanktime.h"
 #include "qt-helper/qt-helper.h"
@@ -46,6 +47,7 @@ struct scr_settings_s {
 };
 
 static struct settings_s {
+	int    dpi;
 	int    blanktime;
 	int    dpms[3];
 	bool   dpms_on;
@@ -65,6 +67,7 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent) {
 	tabs		  = new QTabWidget;
 	DPMS	    *dpms = new DPMS(QString(tr("DPMS")), scr);
 	Blanktime   *bt	  = new Blanktime(QString(tr("Blanktime")), scr);
+	DPI	    *dpi  = new DPI(QString(tr("DPI")), scr);
 	QWidget	    *w	  = new QWidget(parent);
 	QHBoxLayout *bbox = new QHBoxLayout;
 	QHBoxLayout *hbox = new QHBoxLayout;
@@ -76,6 +79,8 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent) {
 	bbox->addWidget(quit, 0, Qt::AlignRight);
 	hbox->addWidget(dpms);
 	hbox->addWidget(bt);
+	hbox->addWidget(dpi);
+	hbox->addStretch(1);
 	vbox->addLayout(hbox);
 	createOutputList();
 	createTabs();
@@ -100,6 +105,7 @@ MainWin::updateSettings()
 	settings.blanktime = dsbds_get_blanktime(scr);
 	dsbds_get_dpms_info(scr, &settings.dpms_on,
 	    &settings.dpms[0], &settings.dpms[1], &settings.dpms[2]);
+	settings.dpi = dsbds_get_dpi(scr);
 	for (int i = 0; i < dsbds_output_count(scr); i++) {
 		if (!dsbds_connected(scr, i))
 			continue;
@@ -179,7 +185,8 @@ MainWin::quitSlot()
 	dsbds_get_dpms_info(scr, &dpms_on, &dpms[0], &dpms[1], &dpms[2]);
 	if (settings.blanktime != dsbds_get_blanktime(scr) ||
 	    settings.dpms_on != dpms_on || settings.dpms[0] != dpms[0] ||
-	    settings.dpms[1] != dpms[1] || settings.dpms[2] != dpms[2])
+	    settings.dpms[1] != dpms[1] || settings.dpms[2] != dpms[2] ||
+	    settings.dpi != dsbds_get_dpi(scr))
 		changed = true;
 	for (int i = 0; i < dsbds_output_count(scr); i++) {
 		if (!dsbds_connected(scr, i))
