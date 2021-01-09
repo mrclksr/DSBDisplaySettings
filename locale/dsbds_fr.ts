@@ -10,6 +10,14 @@
     </message>
 </context>
 <context>
+    <name>DPI</name>
+    <message>
+        <location filename="../src/dpi.cpp" line="39"/>
+        <source>Change DPI</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>DPMS</name>
     <message>
         <location filename="../src/dpms.cpp" line="39"/>
@@ -28,53 +36,58 @@
 <context>
     <name>MainWin</name>
     <message>
-        <location filename="../src/mainwin.cpp" line="66"/>
+        <location filename="../src/mainwin.cpp" line="68"/>
         <source>DPMS</source>
         <translation>DPMS</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="67"/>
+        <location filename="../src/mainwin.cpp" line="69"/>
         <source>Blanktime</source>
         <translation>Écran vide</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="72"/>
-        <location filename="../src/mainwin.cpp" line="211"/>
+        <location filename="../src/mainwin.cpp" line="70"/>
+        <source>DPI</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/mainwin.cpp" line="75"/>
+        <location filename="../src/mainwin.cpp" line="218"/>
         <source>&amp;Save</source>
         <translation>&amp;Sauvegarder</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="73"/>
+        <location filename="../src/mainwin.cpp" line="76"/>
         <source>&amp;Quit</source>
         <translation>&amp;Quitter</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="168"/>
+        <location filename="../src/mainwin.cpp" line="174"/>
         <source>Saved</source>
         <translation>Sauvegardé</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="205"/>
+        <location filename="../src/mainwin.cpp" line="212"/>
         <source>Settings have been changed</source>
         <translation>Les paramètres ont été modifiés</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="206"/>
+        <location filename="../src/mainwin.cpp" line="213"/>
         <source>Settings changed</source>
         <translation>Paramètres modifiés</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="207"/>
+        <location filename="../src/mainwin.cpp" line="214"/>
         <source>Do you want to save your changes?</source>
         <translation>Voulez-vous sauvegarder vos changements ?</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="213"/>
+        <location filename="../src/mainwin.cpp" line="220"/>
         <source>&amp;Quit without saving</source>
         <translation>&amp;Quitter sans sauvegarder</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="214"/>
+        <location filename="../src/mainwin.cpp" line="221"/>
         <source>&amp;Cancel</source>
         <translation>&amp;Cancel</translation>
     </message>
