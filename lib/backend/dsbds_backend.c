@@ -38,15 +38,15 @@ usage()
 	    "[-d enable:standby:suspend:off]\n"			\
 	    "       dsbds_backend [-b brightness][-g r:g:b]"	\
 	    "[-l <LCD brightness>]\n"				\
-	    "                     [-s <sx>x<sy>] output\n");
+	    "                     [-s <sx>x<sy>] [-D dpi] output\n");
 	exit(EXIT_FAILURE);
 }
 
 int
 main(int argc, char *argv[])
 {
-	int	  ch, blanktime, dpms[4], i, mode, lbrightness, output;
-	bool	  Bflag, bflag, dflag, gflag, lflag, mflag, sflag;
+	int	  ch, blanktime, dpms[4], dpi, i, mode, lbrightness, output;
+	bool	  Bflag, Dflag, bflag, dflag, gflag, lflag, mflag, sflag;
 	char	  *p;
 	double	  brightness, gamma[3], sx, sy;
 	Display	  *d;
@@ -54,12 +54,16 @@ main(int argc, char *argv[])
 
 	(void)setlocale(LC_NUMERIC, "C");
 
-	Bflag = bflag = dflag = gflag = lflag = mflag = sflag = false;
-	while ((ch = getopt(argc, argv, "B:b:d:g:l:m:s:")) != -1) {
+	Bflag = Dflag = bflag = dflag = gflag = lflag = mflag = sflag = false;
+	while ((ch = getopt(argc, argv, "B:D:b:d:g:l:m:s:")) != -1) {
 		switch (ch) {
 		case 'B':
 			Bflag = true;
 			blanktime = strtol(optarg, NULL, 10);
+			break;
+		case 'D':
+			Dflag = true;
+			dpi = strtol(optarg, NULL, 10);
 			break;
 		case 'b':
 			bflag = true;
@@ -130,6 +134,8 @@ main(int argc, char *argv[])
 	}
 	if (Bflag)
 		dsbds_set_blanktime(scr, blanktime);
+	if (Dflag)
+		dsbds_set_dpi(scr, dpi);
 	if (bflag) {
 		dsbds_set_brightness(scr, output, brightness);
 	}
