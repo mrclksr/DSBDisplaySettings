@@ -776,67 +776,6 @@ dsbds_get_dpi(dsbds_scr *scr)
 	return (scr->dpi);
 }
 
-static int
-write_xdefaults(int dpi)
-{
-	int	      error, fd;
-	bool	      found;
-	size_t	      len;
-	FILE 	      *fp, *tmpfp;
-	char	      *tmpath, *path, *ln;
-	struct passwd *pwd;
-
-	pwd = getpwuid(getuid());
-	endpwent();
-	if (pwd == NULL) {
-		warn("getpwuid(%d)", getuid());
-		return (-1);
-	}
-	len = strlen(pwd->pw_dir) + sizeof("/.Xdefaults") + sizeof(".XXXXX");
-	if ((tmpath = malloc(len)) == NULL)
-		err(EXIT_FAILURE, "malloc()");
-	(void)snprintf(tmpath, len, "%s/X.defaults.XXXXX", pwd->pw_dir);
-
-	len = strlen(pwd->pw_dir) + sizeof("/.Xdefaults");
-	if ((path = malloc(len)) == NULL)
-		err(EXIT_FAILURE, "malloc()");
-	(void)snprintf(path, len, "%s/.Xdefaults", pwd->pw_dir);
-
-	if ((fp = fopen(path, "r")) == NULL && errno != ENOENT)
-		err(EXIT_FAILURE, "fopen(%s)", path);
-	if ((fd = mkstemp(tmpath)) == -1) {
-		warn("mkstemp(%s)", tmpath); free(tmpath);
-		return (-1);
-	}
-	if ((tmpfp = fdopen(fd, "w")) == NULL) {
-		warn("fdopen()"); free(tmpath); (void)close(fd);
-		return (-1);
-	}
-	found = false; error = 0;
-	for (len = 0, ln = NULL; fp != NULL && getline(&ln, &len, fp) > 0;) {
-		if (strncmp(ln, "Xft.dpi:", 8) == 0) {
-			(void)fprintf(tmpfp, "Xft.dpi: %d\n", dpi);
-			found = true;
-		} else
-			(void)fputs(ln, tmpfp);
-	}
-	free(ln);
-	if (!found)
-		(void)fprintf(tmpfp, "Xft.dpi: %d\n", dpi);
-	(void)fclose(tmpfp);
-	if (fp != NULL)
-		(void)fclose(fp);
-	if (rename(tmpath, path) == -1) {
-		warn("rename(%s, %s)", tmpath, path);
-		error = -1;
-	}
-	free(path);
-	free(tmpath);
-
-	return (error);
-
-}
-
 int
 dsbds_set_dpi(dsbds_scr *scr, int dpi)
 {
@@ -853,7 +792,7 @@ dsbds_set_dpi(dsbds_scr *scr, int dpi)
 int
 dsbds_save_settings(dsbds_scr *scr)
 {
-	int  i, ret, dpms[3];
+	int  i, ret, dpi, dpms[3];
 	bool dpms_on;
 	char *tmpath, *topath;
 	FILE *fp;
@@ -864,10 +803,14 @@ dsbds_save_settings(dsbds_scr *scr)
 	if ((topath = get_script_path(NULL)) == NULL)
 		return (-1);
 	dsbds_get_dpms_info(scr, &dpms_on, &dpms[0], &dpms[1], &dpms[2]);
+	dpi = dsbds_get_dpi(scr);
+	if (dpi < 0)
+		dpi = 96;
 	(void)fprintf(fp, "#!/bin/sh\n");
-	(void)fprintf(fp, "%s -B %d -d %d:%d:%d:%d\n",
+	(void)fprintf(fp, "%s -B %d -d %d:%d:%d:%d -D %d\n",
 	    PATH_BACKEND,
-	    dsbds_get_blanktime(scr), !!dpms_on, dpms[0], dpms[1], dpms[2]);
+	    dsbds_get_blanktime(scr), !!dpms_on, dpms[0], dpms[1], dpms[2],
+	    dpi);
 	for (i = 0; i < dsbds_output_count(scr); i++) {
 		if (!dsbds_connected(scr, i))
 			continue;
@@ -907,5 +850,5 @@ dsbds_save_settings(dsbds_scr *scr)
 		warn("chmod(%s)", topath);
 	free(tmpath); free(topath);
 
-	return (write_xdefaults(scr->dpi));
+	return (0);
 }
