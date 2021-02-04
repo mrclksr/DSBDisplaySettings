@@ -37,7 +37,6 @@ DPI::DPI(const QString &title, dsbds_scr *scr, QWidget *parent)
 
 	sb	  	  = new QSpinBox;
 	QPushButton *bt	  = new QPushButton(tr("Change DPI"));
-	QLabel *label	  = new QLabel("DPI");
 	QHBoxLayout *hbox = new QHBoxLayout(parent);
 
 	sb->setMinimum(1);
@@ -45,7 +44,6 @@ DPI::DPI(const QString &title, dsbds_scr *scr, QWidget *parent)
 	sb->setSuffix(" dpi");
 	sb->setValue(dpi);
 
-	hbox->addWidget(label);
 	hbox->addWidget(sb);
 	hbox->addWidget(bt);
 	hbox->addStretch(1);
