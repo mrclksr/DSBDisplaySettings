@@ -34,11 +34,13 @@
 static void
 usage()
 {
-	(void)printf("Usage: dsbds_backend [-B blanktime]"	\
+	(void)printf("Usage: dsbds_backend -o output\n"		\
+	    "       dsbds_backend [-B blanktime]"		\
 	    "[-d enable:standby:suspend:off]\n"			\
 	    "       dsbds_backend [-b brightness][-g r:g:b]"	\
 	    "[-l <LCD brightness>]\n"				\
-	    "                     [-p yes|no] [-s <sx>x<sy>] [-D dpi] output\n");
+	    "                     [-p yes|no][-s <sx>x<sy>] "	\
+	    "[-D dpi] output\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -47,7 +49,7 @@ main(int argc, char *argv[])
 {
 	int	  ch, blanktime, dpms[4], dpi, i, mode, lbrightness, output;
 	bool	  Bflag, Dflag, bflag, dflag, gflag, lflag, mflag;
-	bool	  pflag, sflag, primary;
+	bool	  oflag, pflag, sflag, primary;
 	char	  *p;
 	double	  brightness, gamma[3], sx, sy;
 	Display	  *d;
@@ -56,8 +58,8 @@ main(int argc, char *argv[])
 	(void)setlocale(LC_NUMERIC, "C");
 
 	Bflag = Dflag = bflag = dflag = gflag = false;
-	lflag = mflag = pflag = sflag = false;
-	while ((ch = getopt(argc, argv, "B:D:b:d:g:l:m:p:s:")) != -1) {
+	lflag = mflag = oflag = pflag = sflag = false;
+	while ((ch = getopt(argc, argv, "B:D:b:d:g:l:m:p:s:o")) != -1) {
 		switch (ch) {
 		case 'B':
 			Bflag = true;
@@ -95,6 +97,9 @@ main(int argc, char *argv[])
 			mflag = true;
 			mode = strtol(optarg, NULL, 10);
 			break;
+		case 'o':
+			oflag = true;
+			break;
 		case 'p':
 			pflag = true;
 			if (strcmp(optarg, "yes") == 0)
@@ -114,10 +119,8 @@ main(int argc, char *argv[])
 				else
 					sy = strtod(p, NULL);
 			}
-			if (i != 2) {
-				warnx("HERE");
+			if (i != 2)
 				usage();
-			}
 			break;
 		case '?':
 		default:
@@ -129,7 +132,10 @@ main(int argc, char *argv[])
 
 	if (argc < 1 && !(Bflag || dflag))
 		usage();
-	if ((lflag || bflag || gflag || mflag || pflag) && argc < 1)
+	if ((lflag || bflag || gflag || mflag || oflag || pflag) && argc < 1)
+		usage();
+	if (oflag && \
+	   (bflag || gflag || mflag || pflag || sflag || Dflag || dflag))
 		usage();
 	if (!lflag)
 		(void)seteuid(getuid());
@@ -168,6 +174,8 @@ main(int argc, char *argv[])
 	}
 	if (mflag)
 		dsbds_set_mode(scr, output, mode);
+	if (oflag)
+		dsbds_set_off(scr, output);
 	if (pflag)
 		dsbds_set_primary(scr, output, primary);
 	if (sflag)

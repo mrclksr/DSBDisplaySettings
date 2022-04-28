@@ -846,7 +846,10 @@ dsbds_save_settings(dsbds_scr *scr)
 	for (i = 0; i < dsbds_output_count(scr); i++) {
 		if (!dsbds_connected(scr, i))
 			continue;
-		if (dsbds_is_lvds(scr, i)) {
+		if (!dsbds_enabled(scr, i)) {
+			ret = fprintf(fp, "%s -o %s\n", PATH_BACKEND,
+			    dsbds_output_name(scr, i));
+		} else if (dsbds_is_lvds(scr, i)) {
 			ret = fprintf(fp,
 			    "%s -b %f -m %d -l %d -g %f:%f:%f -s %fx%f -p %s %s\n",
 			    PATH_BACKEND,

@@ -117,7 +117,7 @@ MainWin::updateSettings()
 	for (int i = 0; i < dsbds_output_count(scr); i++) {
 		if (!dsbds_connected(scr, i))
 			continue;
-		settings.ss[i].mode			 = dsbds_get_mode(scr, i);
+		settings.ss[i].mode	     = dsbds_get_mode(scr, i);
 		settings.ss[i].brightness    = dsbds_get_brightness(scr, i);
 		settings.ss[i].lcdbrightness =
 		    dsbds_get_lcd_brightness_level(scr,i);
