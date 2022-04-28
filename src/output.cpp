@@ -30,22 +30,27 @@ Output::Output(dsbds_scr *scr, int output, QWidget *parent) : QWidget(parent) {
 	gamma        = new Gamma(QString(tr("Gamma correction")), scr, output);
 	brightness   = new Brightness(QString(tr("Brightness")), scr, output);
 	onOff	     = new OnOff(QString(tr("Enable/Disable")), scr, output);
+	primary	     = new Primary(QString(tr("Primary Screen")), scr, output);
+
 	this->scr    = scr;
 	this->output = output;
+	QHBoxLayout *hbox = new QHBoxLayout;
+	QHBoxLayout *layout = new QHBoxLayout;
+	QVBoxLayout *vbox = new QVBoxLayout;
 
-	QGridLayout *grid = new QGridLayout;
-	grid->setColumnStretch(1, 1);
-	grid->setRowStretch(1, 1);
-	grid->addWidget(onOff, 0, 0);
-	grid->addWidget(mode,  1, 0);
-	grid->addWidget(gamma,  0, 1, 4, 1);
-	grid->addWidget(scale, 2, 0);
-	grid->addWidget(brightness, 3, 0);
+	hbox->addWidget(onOff);
+	hbox->addWidget(primary);
+	vbox->addLayout(hbox);
+	vbox->addWidget(mode);
+	vbox->addWidget(scale);
+	vbox->addWidget(brightness);
 
-	setLayout(grid);
-
+	layout->addLayout(vbox);
+	layout->addWidget(gamma);
+	setLayout(layout);
 	connect(onOff, SIGNAL(changed()), this, SLOT(emitChanged()));
 	connect(mode, SIGNAL(changed()), this, SLOT(emitChanged()));
+	connect(primary, SIGNAL(changed()), this, SLOT(emitChanged()));
 }
 
 void Output::emitChanged()
@@ -59,4 +64,5 @@ void Output::update()
 	brightness->update();
 	gamma->update();
 	onOff->update();
+	primary->update();
 }

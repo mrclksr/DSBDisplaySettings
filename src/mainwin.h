@@ -45,11 +45,10 @@ private slots:
 	void updateOutputs();
 private:
 	void createOutputList();
-	void createTabs();
 	void updateSettings();
+	QWidget *createOutputTabs();
 private:
 	QIcon	      quitIcon;
-	QTabWidget    *tabs;
 	QList<Output *>outputs;
 	dsbds_scr *scr;
 };

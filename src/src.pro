@@ -21,6 +21,7 @@ HEADERS += ../lib/libdsbds.h \
 	   onoff.h \
 	   scale.h \
 	   dpi.h \
+	   primary.h \
            ../lib/qt-helper/qt-helper.h \
 	   ../lib/dsbcfg/dsbcfg.h
 SOURCES += ../lib/libdsbds.c \
@@ -37,6 +38,7 @@ SOURCES += ../lib/libdsbds.c \
 	   onoff.cpp \
 	   scale.cpp \
 	   dpi.cpp \
+	   primary.cpp \
 	   ../lib/dsbcfg/dsbcfg.c \
            ../lib/qt-helper/qt-helper.cpp
 

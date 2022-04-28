@@ -55,6 +55,8 @@
 #define CMD_XRANDR_SCALE	PATH_XRANDR " --output %s --scale %fx%f"
 #define CMD_XRANDR_INFO		PATH_XRANDR " --verbose"
 #define CMD_XRANDR_DPI		PATH_XRANDR " --dpi %d"
+#define CMD_XRANDR_PRIMARY	PATH_XRANDR " --output %s --primary"
+#define CMD_XRANDR_NO_PRIMARY	PATH_XRANDR " --output %s --noprimary"
 #define CMD_XDPYINFO		PATH_XDPYINFO
 
 #define CHECKNULL(expr) do {					\
@@ -79,6 +81,7 @@ typedef struct dsbds_output_s {
 	int	     preferred;
 	bool	     connected;
 	bool	     is_lvds;
+	bool	     primary;
 	char	     name[12];
 	size_t	     nmodes;
 	double	     sx;
@@ -88,7 +91,7 @@ typedef struct dsbds_output_s {
 	double	     green;
 	double	     blue;
 	lvds_info    lvds;
-	dsbds_mode   modes[24];
+	dsbds_mode   modes[64];
 } dsbds_output;
 
 struct dsbds_scr_s {
@@ -228,6 +231,14 @@ dsbds_is_lvds(dsbds_scr *scr, int output)
 	if (scr == NULL || output < 0 || (size_t)output > scr->noutputs)
 		return (false);
 	return (scr->outputs[output].is_lvds);
+}
+
+bool
+dsbds_is_primary(dsbds_scr *scr, int output)
+{
+	if (scr == NULL || output < 0 || (size_t)output > scr->noutputs)
+		return (false);
+	return (scr->outputs[output].primary);
 }
 
 double
@@ -431,6 +442,22 @@ dsbds_set_on(dsbds_scr *scr, int output)
 	if (dsbds_enabled(scr, output))
 		return (0);
 	(void)snprintf(cmd, sizeof(cmd) - 1, CMD_XRANDR_ON,
+	    scr->outputs[output].name);
+	if (system(cmd) == 0) {
+		dsbds_update_screen(scr);
+		if (dsbds_enabled(scr, output))
+			return (0);
+	}
+	return (-1);
+}
+
+int
+dsbds_set_primary(dsbds_scr *scr, int output, bool on)
+{
+	char cmd[sizeof(CMD_XRANDR_NO_PRIMARY) + 16];
+
+	(void)snprintf(cmd, sizeof(cmd) - 1,
+	    on ? CMD_XRANDR_PRIMARY : CMD_XRANDR_NO_PRIMARY,
 	    scr->outputs[output].name);
 	if (system(cmd) == 0) {
 		dsbds_update_screen(scr);
@@ -669,6 +696,11 @@ update_screen(dsbds_scr *scr)
 				scr->outputs[no].connected = false;
 			else
 				scr->outputs[no].connected = true;
+			CHECKNULL(p = strtok(NULL, " "));
+			if (strcmp(p, "primary") == 0)
+				scr->outputs[no].primary = true;
+			else
+				scr->outputs[no].primary = false;
 		} else if (ln[0] == '\t') {
 			CHECKNULL(p = strtok(ln + 1, " "));
 			if ((q = strtok(NULL, " ")) == NULL)
@@ -816,7 +848,7 @@ dsbds_save_settings(dsbds_scr *scr)
 			continue;
 		if (dsbds_is_lvds(scr, i)) {
 			ret = fprintf(fp,
-			    "%s -b %f -m %d -l %d -g %f:%f:%f -s %fx%f %s\n",
+			    "%s -b %f -m %d -l %d -g %f:%f:%f -s %fx%f -p %s %s\n",
 			    PATH_BACKEND,
 			    dsbds_get_brightness(scr, i),
 			    dsbds_enabled(scr, i) ? dsbds_get_mode(scr, i) : -1,
@@ -824,16 +856,18 @@ dsbds_save_settings(dsbds_scr *scr)
 			    scr->outputs[i].red, scr->outputs[i].green,
 			    scr->outputs[i].blue,
 			    scr->outputs[i].sx, scr->outputs[i].sy,
+			    dsbds_is_primary(scr, i) ? "yes" : "no",
 			    dsbds_output_name(scr, i));
 		} else {
 			ret = fprintf(fp,
-			    "%s -b %f -m %d -g %f:%f:%f -s %fx%f %s\n",
+			    "%s -b %f -m %d -g %f:%f:%f -s %fx%f -p %s %s\n",
 			    PATH_BACKEND,
 			    dsbds_get_brightness(scr, i),
 			    dsbds_enabled(scr, i) ? dsbds_get_mode(scr, i) : -1,
 			    scr->outputs[i].red, scr->outputs[i].green,
 			    scr->outputs[i].blue,
 			    scr->outputs[i].sx, scr->outputs[i].sy,
+			    dsbds_is_primary(scr, i) ? "yes" : "no",
 			    dsbds_output_name(scr, i));
 		}
 		if (ret < 0) {

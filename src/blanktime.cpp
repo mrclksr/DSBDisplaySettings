@@ -43,8 +43,8 @@ Blanktime::Blanktime(const QString &title, dsbds_scr *scr, QWidget *parent)
 	sb->setSuffix(" min");
 	sb->setValue(blanktime);
 
-	hbox->addWidget(label);
-	hbox->addWidget(sb);
+	hbox->addWidget(label, 0, Qt::AlignCenter);
+	hbox->addWidget(sb, 0, Qt::AlignCenter);
 	hbox->addStretch(1);
 	connect(sb, SIGNAL(valueChanged(int)), this, SLOT(setBlanktime(int)));
 

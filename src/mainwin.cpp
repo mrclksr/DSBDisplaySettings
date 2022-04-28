@@ -64,29 +64,35 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent) {
 	QIcon wicon	  = qh_loadIcon("video-display", NULL);
 	QIcon sicon	  = qh_loadStockIcon(QStyle::SP_DialogSaveButton);
 	QIcon qicon	  = qh_loadStockIcon(QStyle::SP_DialogCloseButton);
-	tabs		  = new QTabWidget;
+	QTabWidget  *tabs = new QTabWidget;
+	QWidget *outputTabs = createOutputTabs();
+	QWidget	    *page = new QWidget;
 	DPMS	    *dpms = new DPMS(QString(tr("DPMS")), scr);
 	Blanktime   *bt	  = new Blanktime(QString(tr("Blanktime")), scr);
 	DPI	    *dpi  = new DPI(QString(tr("DPI")), scr);
 	QWidget	    *w	  = new QWidget(parent);
 	QHBoxLayout *bbox = new QHBoxLayout;
-	QHBoxLayout *hbox = new QHBoxLayout;
 	QVBoxLayout *vbox = new QVBoxLayout;
+	QVBoxLayout *layout = new QVBoxLayout;
 	QPushButton *save = new QPushButton(sicon, tr("&Save"));
 	QPushButton *quit = new QPushButton(qicon, tr("&Quit"));
 
 	bbox->addWidget(save, 1, Qt::AlignRight);
 	bbox->addWidget(quit, 0, Qt::AlignRight);
-	hbox->addWidget(dpms);
-	hbox->addWidget(bt);
-	hbox->addWidget(dpi);
-	hbox->addStretch(1);
-	vbox->addLayout(hbox);
-	createOutputList();
-	createTabs();
-	vbox->addWidget(tabs);
-	vbox->addLayout(bbox);
-	w->setLayout(vbox);
+
+	vbox->addWidget(dpms, 1, Qt::AlignTop);
+
+	vbox->addWidget(bt,  0, Qt::AlignTop);
+	vbox->addWidget(dpi, 0, Qt::AlignTop);
+	vbox->addStretch(1);
+
+	page->setLayout(vbox);
+	tabs->addTab(page, tr("Screen Settings"));
+	tabs->addTab(outputTabs, tr("Output Settings"));
+
+	layout->addWidget(tabs);
+	layout->addLayout(bbox);
+	w->setLayout(layout);
 	setCentralWidget(w);
 
 	connect(save, SIGNAL(clicked()), this, SLOT(saveSlot()));
@@ -130,10 +136,13 @@ MainWin::createOutputList()
 	}
 }
 
-void
-MainWin::createTabs()
+QWidget *
+MainWin::createOutputTabs()
 {
 	int idx = -1;
+	QTabWidget *tabs = new QTabWidget;
+
+	createOutputList();
 
 	for (int i = 0; i < outputs.count(); i++) {
 		QString label(dsbds_output_name(scr, i));
@@ -142,8 +151,12 @@ MainWin::createTabs()
 		tabs->addTab(outputs.at(i), label);
 		if (idx == -1 && dsbds_connected(scr, i))
 			idx = i;
+		if (dsbds_is_primary(scr, i))
+			idx = i;
 	}
 	tabs->setCurrentIndex(idx == -1 ? 0 : idx);
+
+	return (tabs);
 }
 
 void

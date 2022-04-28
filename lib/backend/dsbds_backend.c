@@ -38,7 +38,7 @@ usage()
 	    "[-d enable:standby:suspend:off]\n"			\
 	    "       dsbds_backend [-b brightness][-g r:g:b]"	\
 	    "[-l <LCD brightness>]\n"				\
-	    "                     [-s <sx>x<sy>] [-D dpi] output\n");
+	    "                     [-p yes|no] [-s <sx>x<sy>] [-D dpi] output\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -46,7 +46,8 @@ int
 main(int argc, char *argv[])
 {
 	int	  ch, blanktime, dpms[4], dpi, i, mode, lbrightness, output;
-	bool	  Bflag, Dflag, bflag, dflag, gflag, lflag, mflag, sflag;
+	bool	  Bflag, Dflag, bflag, dflag, gflag, lflag, mflag;
+	bool	  pflag, sflag, primary;
 	char	  *p;
 	double	  brightness, gamma[3], sx, sy;
 	Display	  *d;
@@ -54,8 +55,9 @@ main(int argc, char *argv[])
 
 	(void)setlocale(LC_NUMERIC, "C");
 
-	Bflag = Dflag = bflag = dflag = gflag = lflag = mflag = sflag = false;
-	while ((ch = getopt(argc, argv, "B:D:b:d:g:l:m:s:")) != -1) {
+	Bflag = Dflag = bflag = dflag = gflag = false;
+	lflag = mflag = pflag = sflag = false;
+	while ((ch = getopt(argc, argv, "B:D:b:d:g:l:m:p:s:")) != -1) {
 		switch (ch) {
 		case 'B':
 			Bflag = true;
@@ -93,6 +95,15 @@ main(int argc, char *argv[])
 			mflag = true;
 			mode = strtol(optarg, NULL, 10);
 			break;
+		case 'p':
+			pflag = true;
+			if (strcmp(optarg, "yes") == 0)
+				primary = true;
+			else if (strcmp(optarg, "no") == 0)
+				primary = false;
+			else
+				usage();
+			break;
 		case 's':
 			sflag = true;
 			for (i = 0, p = optarg;
@@ -115,8 +126,10 @@ main(int argc, char *argv[])
 	}
 	argc -= optind;
 	argv += optind;
-	
-	if ((lflag || bflag || gflag || mflag) && argc < 1)
+
+	if (argc < 1 && !(Bflag || dflag))
+		usage();
+	if ((lflag || bflag || gflag || mflag || pflag) && argc < 1)
 		usage();
 	if (!lflag)
 		(void)seteuid(getuid());
@@ -155,6 +168,8 @@ main(int argc, char *argv[])
 	}
 	if (mflag)
 		dsbds_set_mode(scr, output, mode);
+	if (pflag)
+		dsbds_set_primary(scr, output, primary);
 	if (sflag)
 		dsbds_set_scale(scr, output, sx, sy);
 	return (EXIT_SUCCESS);

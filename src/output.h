@@ -30,6 +30,7 @@
 #include "mode.h"
 #include "onoff.h"
 #include "scale.h"
+#include "primary.h"
 
 class Output : public QWidget
 {
@@ -46,6 +47,7 @@ private:
 	Mode	   *mode;
 	Gamma	   *gamma;
 	OnOff	   *onOff;
+	Primary	   *primary;
 	Scale	   *scale;
 	dsbds_scr  *scr;
 	QComboBox  *cbox;

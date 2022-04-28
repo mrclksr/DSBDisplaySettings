@@ -44,8 +44,8 @@ DPI::DPI(const QString &title, dsbds_scr *scr, QWidget *parent)
 	sb->setSuffix(" dpi");
 	sb->setValue(dpi);
 
-	hbox->addWidget(sb);
-	hbox->addWidget(bt);
+	hbox->addWidget(sb, 0, Qt::AlignCenter);
+	hbox->addWidget(bt, 0, Qt::AlignCenter);
 	hbox->addStretch(1);
 	connect(bt, SIGNAL(clicked()), this, SLOT(setDPI()));
 

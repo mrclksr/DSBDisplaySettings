@@ -77,6 +77,9 @@ DPMS::DPMS(const QString &title, dsbds_scr *scr, QWidget *parent)
 	connect(offSb, SIGNAL(valueChanged(int)), this,
 	    SLOT(setOff(int)));
 	setLayout(grid);
+	grid->addItem(new QSpacerItem(1, 1, QSizePolicy::Expanding,
+            QSizePolicy::Expanding), 4, 0);
+
 }
 
 void DPMS::enableDPMS(int state)
