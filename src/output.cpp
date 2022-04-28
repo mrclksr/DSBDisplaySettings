@@ -25,25 +25,23 @@
 #include "output.h"
 
 Output::Output(dsbds_scr *scr, int output, QWidget *parent) : QWidget(parent) {
-	mode         = new Mode(QString(tr("Mode")), scr, output);
-	scale	     = new Scale(QString(tr("Scale")), scr, output);
-	gamma        = new Gamma(QString(tr("Gamma correction")), scr, output);
-	brightness   = new Brightness(QString(tr("Brightness")), scr, output);
-	onOff	     = new OnOff(QString(tr("Enable/Disable")), scr, output);
-	primary	     = new Primary(QString(tr("Primary Screen")), scr, output);
+	mode       = new Mode(QString(tr("Mode")), scr, output);
+	scale	   = new Scale(QString(tr("Scale")), scr, output);
+	gamma      = new Gamma(QString(tr("Gamma correction")), scr, output);
+	brightness = new Brightness(QString(tr("Brightness")), scr, output);
+	onOff	   = new OnOff(scr, output);
+	primary	   = new Primary(scr, output);
 
 	this->scr    = scr;
 	this->output = output;
-	QHBoxLayout *hbox = new QHBoxLayout;
 	QHBoxLayout *layout = new QHBoxLayout;
 	QVBoxLayout *vbox = new QVBoxLayout;
 
-	hbox->addWidget(onOff);
-	hbox->addWidget(primary);
-	vbox->addLayout(hbox);
+	vbox->addWidget(primary);
 	vbox->addWidget(mode);
 	vbox->addWidget(scale);
 	vbox->addWidget(brightness);
+	vbox->addWidget(onOff);
 
 	layout->addLayout(vbox);
 	layout->addWidget(gamma);

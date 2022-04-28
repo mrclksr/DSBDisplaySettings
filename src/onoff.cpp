@@ -2,8 +2,8 @@
 
 #include "onoff.h"
 
-OnOff::OnOff(const QString &title, dsbds_scr *scr, int output, QWidget *parent)
-	: QGroupBox(title, parent)
+OnOff::OnOff(dsbds_scr *scr, int output, QWidget *parent)
+	: QWidget(parent)
 {
 	this->scr = scr;
 	this->cb  = new QCheckBox(tr("Enable output"));

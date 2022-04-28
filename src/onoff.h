@@ -23,16 +23,15 @@
  */
 #ifndef _ONOFF_H_
 #define _ONOFF_H_ 1
-#include <QGroupBox>
 #include <QCheckBox>
 
 #include "dsbds.h"
 
-class OnOff : public QGroupBox
+class OnOff : public QWidget
 {
 	Q_OBJECT
 public:
-	OnOff(const QString &title, dsbds_scr *scr, int output,
+	OnOff(dsbds_scr *scr, int output,
 		QWidget *parent = 0);
 	void update();
 signals:
