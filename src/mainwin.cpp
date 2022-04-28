@@ -40,6 +40,8 @@
 struct scr_settings_s {
 	int    lcdbrightness;
 	int    mode;
+	bool   primary;
+	bool   enabled;
 	double sx;
 	double sy;
 	double gamma[3];
@@ -64,12 +66,12 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent) {
 	QIcon wicon	  = qh_loadIcon("video-display", NULL);
 	QIcon sicon	  = qh_loadStockIcon(QStyle::SP_DialogSaveButton);
 	QIcon qicon	  = qh_loadStockIcon(QStyle::SP_DialogCloseButton);
-	QTabWidget  *tabs = new QTabWidget;
+	QTabWidget *tabs  = new QTabWidget;
 	QWidget *outputTabs = createOutputTabs();
 	QWidget	    *page = new QWidget;
 	DPMS	    *dpms = new DPMS(QString(tr("DPMS")), scr);
 	Blanktime   *bt	  = new Blanktime(QString(tr("Blanktime")), scr);
-	DPI	    *dpi  = new DPI(QString(tr("DPI")), scr);
+	DPI			*dpi  = new DPI(QString(tr("DPI")), scr);
 	QWidget	    *w	  = new QWidget(parent);
 	QHBoxLayout *bbox = new QHBoxLayout;
 	QVBoxLayout *vbox = new QVBoxLayout;
@@ -115,7 +117,7 @@ MainWin::updateSettings()
 	for (int i = 0; i < dsbds_output_count(scr); i++) {
 		if (!dsbds_connected(scr, i))
 			continue;
-		settings.ss[i].mode	     = dsbds_get_mode(scr, i);
+		settings.ss[i].mode			 = dsbds_get_mode(scr, i);
 		settings.ss[i].brightness    = dsbds_get_brightness(scr, i);
 		settings.ss[i].lcdbrightness =
 		    dsbds_get_lcd_brightness_level(scr,i);
@@ -123,6 +125,8 @@ MainWin::updateSettings()
 		    &settings.ss[i].gamma[1], &settings.ss[i].gamma[2]);
 		settings.ss[i].sx = dsbds_get_xscale(scr, i);
 		settings.ss[i].sy = dsbds_get_yscale(scr, i);
+		settings.ss[i].primary = dsbds_is_primary(scr, i);
+		settings.ss[i].enabled = dsbds_enabled(scr, i);
 	}
 }
 
@@ -139,7 +143,7 @@ MainWin::createOutputList()
 QWidget *
 MainWin::createOutputTabs()
 {
-	int idx = -1;
+	int idx = -1, prop_cnt = 0;
 	QTabWidget *tabs = new QTabWidget;
 
 	createOutputList();
@@ -149,10 +153,24 @@ MainWin::createOutputTabs()
 		if (!dsbds_connected(scr, i))
 			outputs.at(i)->setEnabled(false);
 		tabs->addTab(outputs.at(i), label);
-		if (idx == -1 && dsbds_connected(scr, i))
-			idx = i;
-		if (dsbds_is_primary(scr, i))
-			idx = i;
+		if (prop_cnt < 1) {
+				if (dsbds_connected(scr, i)) {
+					idx = i;
+					prop_cnt = 1;
+				}
+		}
+		if (prop_cnt < 2) {
+			if (dsbds_enabled(scr, i)) {
+				idx = i;
+				prop_cnt = 2;
+			}
+		}
+		if (prop_cnt < 3) {
+			if (dsbds_is_primary(scr, i)) {
+				idx = i;
+				prop_cnt = 3;
+			}
+		}
 	}
 	tabs->setCurrentIndex(idx == -1 ? 0 : idx);
 
@@ -214,7 +232,9 @@ MainWin::quitSlot()
 		    settings.ss[i].gamma[2] != gamma[2] ||
 		    settings.ss[i].mode	    != dsbds_get_mode(scr, i)   ||
 		    settings.ss[i].sx       != dsbds_get_xscale(scr, i) ||
-		    settings.ss[i].sy       != dsbds_get_yscale(scr, i)) {
+		    settings.ss[i].sy       != dsbds_get_yscale(scr, i) ||
+		    settings.ss[i].primary  != dsbds_is_primary(scr, i) ||
+		    settings.ss[i].enabled  != dsbds_enabled(scr, i)) {
 			changed = true;
 		}
 	}
