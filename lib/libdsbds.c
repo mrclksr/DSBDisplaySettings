@@ -839,10 +839,6 @@ dsbds_save_settings(dsbds_scr *scr)
 	if (dpi < 0)
 		dpi = 96;
 	(void)fprintf(fp, "#!/bin/sh\n");
-	(void)fprintf(fp, "%s -B %d -d %d:%d:%d:%d -D %d\n",
-	    PATH_BACKEND,
-	    dsbds_get_blanktime(scr), !!dpms_on, dpms[0], dpms[1], dpms[2],
-	    dpi);
 	for (i = 0; i < dsbds_output_count(scr); i++) {
 		if (!dsbds_connected(scr, i))
 			continue;
@@ -879,6 +875,10 @@ dsbds_save_settings(dsbds_scr *scr)
 			return (-1);
 		}
 	}
+	(void)fprintf(fp, "%s -B %d -d %d:%d:%d:%d -D %d\n",
+	    PATH_BACKEND,
+	    dsbds_get_blanktime(scr), !!dpms_on, dpms[0], dpms[1], dpms[2],
+	    dpi);
 	(void)fclose(fp);
 
 	if ((ret = rename(tmpath, topath)) == -1)
