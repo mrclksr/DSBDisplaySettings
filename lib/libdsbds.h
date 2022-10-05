@@ -56,7 +56,7 @@ extern int    dsbds_set_dpi(dsbds_scr *, int);
 extern int    dsbds_set_primary(dsbds_scr *scr, int output, bool);
 extern bool   dsbds_connected(dsbds_scr *, int);
 extern bool   dsbds_enabled(dsbds_scr *, int);
-extern bool   dsbds_is_lvds(dsbds_scr *, int);
+extern bool   dsbds_is_panel(dsbds_scr *, int);
 extern bool   dsbds_is_primary(dsbds_scr *, int);
 extern void   dsbds_get_dpms_info(dsbds_scr *, bool *, int *, int *, int *);
 extern void   dsbds_get_gamma(dsbds_scr *, int, double *, double *, double *);

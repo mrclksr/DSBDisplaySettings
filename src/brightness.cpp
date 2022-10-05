@@ -34,18 +34,21 @@ Brightness::Brightness(const QString &title, dsbds_scr *scr, int output,
 {
 	this->scr    = scr;
 	this->output = output;
-	brightness   = dsbds_get_brightness(scr, output);
-	if (brightness <= 0)
-		brightness = 0;
-	slider = new Slider(Qt::Horizontal, QString(tr("Software brightness")),
-			    0, 100, (int)(brightness * 100), 1);
+
 	QVBoxLayout *vbox = new QVBoxLayout(parent);
 	vbox->addStretch(1);
-	if (dsbds_is_lvds(scr, output))
+	if (dsbds_is_panel(scr, output)) {
 		vbox->addWidget(new LCDBrightness(scr, output));
-	connect(slider, SIGNAL(valChanged(int)), this,
-	    SLOT(setBrightness(int)));
-	vbox->addWidget(slider);
+	} else {
+		brightness = dsbds_get_brightness(scr, output);
+		if (brightness <= 0)
+			brightness = 0;
+		slider = new Slider(Qt::Horizontal, QString(tr("Software brightness")),
+							0, 100, (int)(brightness * 100), 1);
+		connect(slider, SIGNAL(valChanged(int)), this,
+			SLOT(setBrightness(int)));
+		vbox->addWidget(slider);
+	}
 	vbox->addStretch(1);
 	setLayout(vbox);
 }

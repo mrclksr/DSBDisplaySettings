@@ -26,6 +26,7 @@
 #include <QGridLayout>
 #include <QSpinBox>
 #include <QCheckBox>
+
 #include "qt-helper/qt-helper.h"
 #include "lcdbrightness.h"
 
@@ -65,4 +66,3 @@ void LCDBrightness::update()
 	level = dsbds_get_lcd_brightness_level(scr, output);
 	slider->setVal(level);
 }
-

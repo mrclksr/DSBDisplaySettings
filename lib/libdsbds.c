@@ -45,6 +45,7 @@
 #include "libdsbds.h"
 #include "dsbcfg/dsbcfg.h"
 
+#define PATH_BACKLIGHT_DEV	"/dev/backlight/backlight0"
 #define LCD_LEVELS_OID		"hw.acpi.video.lcd%d.levels"
 #define LCD_BRIGHTNESS_OID	"hw.acpi.video.lcd%d.brightness"
 #define CMD_XRANDR_MODE		PATH_XRANDR " --output %s --mode %s --rate %f"
@@ -58,17 +59,25 @@
 #define CMD_XRANDR_PRIMARY	PATH_XRANDR " --output %s --primary"
 #define CMD_XRANDR_NO_PRIMARY	PATH_XRANDR " --output %s --noprimary"
 #define CMD_XDPYINFO		PATH_XDPYINFO
+#define CMD_GET_BACKLIGHT	"/usr/bin/backlight -q"
+#define CMD_SET_BACKLIGHT	"/usr/bin/backlight"
 
 #define CHECKNULL(expr) do {					\
 	if ((expr) == NULL)					\
 		err(EXIT_FAILURE, "Uexpected command output");	\
 } while(0)
 
-typedef struct lvds_info_s {
+enum BRIGHTNESS_METHOD {
+	BRIGHTNESS_METHOD_ACPI_VIDEO = 1,
+	BRIGHTNESS_METHOD_BACKLIGHT
+};
+
+typedef struct panel_info_s {
 	int	     unit;
+	int	     method;
 	int	     levels[100];
 	size_t	     nlevels;
-} lvds_info;
+} panel_info;
 
 typedef struct dsbds_mode_s {
 	char	     mode[12];
@@ -80,7 +89,7 @@ typedef struct dsbds_output_s {
 	int	     curmode;
 	int	     preferred;
 	bool	     connected;
-	bool	     is_lvds;
+	bool	     is_panel;
 	bool	     primary;
 	char	     name[12];
 	size_t	     nmodes;
@@ -90,7 +99,7 @@ typedef struct dsbds_output_s {
 	double	     red;
 	double	     green;
 	double	     blue;
-	lvds_info    lvds;
+	panel_info   panel;
 	dsbds_mode   modes[64];
 } dsbds_output;
 
@@ -103,7 +112,13 @@ struct dsbds_scr_s {
 };
 
 static int update_screen(dsbds_scr *s);
-static int init_lvds_info(int, lvds_info *);
+static int init_panel_info(int, panel_info *);
+static int init_acpi_video(int, panel_info *);
+static int init_backlight(int, panel_info *);
+static int get_acpi_video_brightness_level(panel_info *);
+static int get_backlight_level(panel_info *);
+static int set_acpi_video_brightness_level(panel_info *, int);
+static int set_backlight_level(panel_info *, int);
 
 int
 dsbds_update_screen(dsbds_scr *scr)
@@ -135,10 +150,11 @@ dsbds_init_screen(Display *display)
 		return (NULL);
 	}
 	for (i = j = 0; i < scr->noutputs; i++) {
-		if (strncmp(scr->outputs[i].name, "LVDS", 4) != 0)
+		if (strncmp(scr->outputs[i].name, "LVDS", 4) != 0 &&
+		    strncmp(scr->outputs[i].name, "eDP", 3) != 0)
 			continue;
-		scr->outputs[i].is_lvds = true;
-		(void)init_lvds_info(j++, &scr->outputs[i].lvds);
+		scr->outputs[i].is_panel = true;
+		(void)init_panel_info(j++, &scr->outputs[i].panel);
 	}
 	return (scr);
 }
@@ -226,11 +242,11 @@ dsbds_enabled(dsbds_scr *scr, int output)
 }
 	
 bool
-dsbds_is_lvds(dsbds_scr *scr, int output)
+dsbds_is_panel(dsbds_scr *scr, int output)
 {
 	if (scr == NULL || output < 0 || (size_t)output > scr->noutputs)
 		return (false);
-	return (scr->outputs[output].is_lvds);
+	return (scr->outputs[output].is_panel);
 }
 
 bool
@@ -470,46 +486,104 @@ dsbds_set_primary(dsbds_scr *scr, int output, bool on)
 int
 dsbds_get_lcd_brightness_level(dsbds_scr *scr, int output)
 {
-	int    val;
-	char   oid[sizeof(LCD_BRIGHTNESS_OID)];
-	size_t i, sz;
+	panel_info *panel = &scr->outputs[output].panel;
 
-	if (!dsbds_is_lvds(scr, output))
+	if (!dsbds_is_panel(scr, output))
 		return (-1);
+	switch (panel->method) {
+	case BRIGHTNESS_METHOD_ACPI_VIDEO:
+		return (get_acpi_video_brightness_level(panel));
+	case BRIGHTNESS_METHOD_BACKLIGHT:
+		return (get_backlight_level(panel));
+	}
+	return (-1);
+}
+
+static int
+get_acpi_video_brightness_level(panel_info *panel)
+{
+	int	val;
+	char	oid[sizeof(LCD_BRIGHTNESS_OID)];
+	size_t	i, sz;
+
 	sz = sizeof(int);
-	(void)snprintf(oid, sizeof(oid), LCD_BRIGHTNESS_OID,
-	    scr->outputs[output].lvds.unit);
+	(void)snprintf(oid, sizeof(oid), LCD_BRIGHTNESS_OID, panel->unit);
 	if (sysctlbyname(oid, &val, &sz, NULL, 0) == -1)
 		return (-1);
-	for (i = 0; i < scr->outputs[output].lvds.nlevels; i++) {
-		if (scr->outputs[output].lvds.levels[i] == val)
+	for (i = 0; i < panel->nlevels; i++) {
+		if (panel->levels[i] == val)
 			return (i);
 	}
 	return (-1);
 }
 
+static int
+get_backlight_level(panel_info *panel)
+{
+	int  val;
+	char ln[64], *p;
+	FILE *fp;
+
+	if ((fp = popen(CMD_GET_BACKLIGHT, "r")) == NULL)
+		err(EXIT_FAILURE, "popen(%s)", CMD_GET_BACKLIGHT);
+	p = fgets(ln, sizeof(ln), fp);
+	(void)fclose(fp);
+	if (p == NULL)
+		return (-1);
+	val = strtol(p, NULL, 10) % 100;
+	panel->levels[val] = val;
+
+	return (val);
+}
+
 int
 dsbds_set_lcd_brightness_level(dsbds_scr *scr, int output, int level)
 {
+	panel_info *panel = &scr->outputs[output].panel;
+
+	if (!dsbds_is_panel(scr, output))
+		return (-1);
+	switch (panel->method) {
+	case BRIGHTNESS_METHOD_ACPI_VIDEO:
+		return (set_acpi_video_brightness_level(panel, level));
+	case BRIGHTNESS_METHOD_BACKLIGHT:
+		return (set_backlight_level(panel, level));
+	}
+	return (-1);
+}
+
+static int
+set_acpi_video_brightness_level(panel_info *panel, int level)
+{
 	char oid[sizeof(LCD_BRIGHTNESS_OID)];
 
-	if (!dsbds_is_lvds(scr, output))
-		return (-1);
-	(void)snprintf(oid, sizeof(oid), LCD_BRIGHTNESS_OID,
-	    scr->outputs[output].lvds.unit);
-	if (sysctlbyname(oid, NULL, NULL,
-	    &scr->outputs[output].lvds.levels[level],
+	(void)snprintf(oid, sizeof(oid), LCD_BRIGHTNESS_OID, panel->unit);
+	if (sysctlbyname(oid, NULL, NULL, &panel->levels[level],
 	    sizeof(int)) == -1)
 		return (-1);
+	return (0);
+}
+
+static int
+set_backlight_level(panel_info *panel, int level)
+{
+	char cmd[sizeof(CMD_SET_BACKLIGHT) + 8];
+
+	level %= 100;
+	(void)snprintf(cmd, sizeof(cmd), "%s %d", CMD_SET_BACKLIGHT, level);
+	if (system(cmd) != 0)
+		return (-1);
+	panel->levels[level] = level;
+
 	return (0);
 }
 
 int
 dsbds_lcd_brightness_count(dsbds_scr *scr, int output)
 {
-	if (!dsbds_is_lvds(scr, output))
+	if (!dsbds_is_panel(scr, output))
 		return (-1);
-	return (scr->outputs[output].lvds.nlevels);
+	return (scr->outputs[output].panel.nlevels);
 }
 
 double
@@ -547,7 +621,21 @@ dsbds_get_yscale(dsbds_scr *scr, int output)
 }
 
 static int
-init_lvds_info(int unit, lvds_info *lvds)
+init_panel_info(int unit, panel_info *panel)
+{
+	/*
+	 * First check if we can use acpi_video to control brightness.
+	 * If not available, try the backlight command.
+	 */
+	if (init_acpi_video(unit, panel) == 0)
+		return (0);
+	if (init_backlight(unit, panel) == 0)
+		return (0);
+	return (-1);
+}
+
+static int
+init_acpi_video(int unit, panel_info *panel)
 {
 	int    buf[100], tmp;
 	char   oid[sizeof(LCD_LEVELS_OID)];
@@ -568,10 +656,26 @@ init_lvds_info(int unit, lvds_info *lvds)
 			}
 		}
 	}
-	lvds->unit    = unit;
-	lvds->nlevels = n / sizeof(int);
-	for (i = 0; i < lvds->nlevels; i++)
-		lvds->levels[i] = buf[i];
+	panel->unit    = unit;
+	panel->nlevels = n / sizeof(int);
+	for (i = 0; i < panel->nlevels; i++)
+		panel->levels[i] = buf[i];
+	panel->method = BRIGHTNESS_METHOD_ACPI_VIDEO;
+
+	return (0);
+}
+
+static int
+init_backlight(int unit, panel_info *panel)
+{
+	if (access(PATH_BACKLIGHT_DEV, F_OK) == -1)
+		return (-1);
+	if (get_backlight_level(panel) == -1)
+		return (-1);
+	panel->unit    = unit;
+	panel->nlevels = 100;
+	panel->method = BRIGHTNESS_METHOD_BACKLIGHT;
+
 	return (0);
 }
 
@@ -845,7 +949,7 @@ dsbds_save_settings(dsbds_scr *scr)
 		if (!dsbds_enabled(scr, i)) {
 			ret = fprintf(fp, "%s -o %s\n", PATH_BACKEND,
 			    dsbds_output_name(scr, i));
-		} else if (dsbds_is_lvds(scr, i)) {
+		} else if (dsbds_is_panel(scr, i)) {
 			ret = fprintf(fp,
 			    "%s -b %f -m %d -l %d -g %f:%f:%f -s %fx%f -p %s %s\n",
 			    PATH_BACKEND,
