@@ -151,6 +151,12 @@ main(int argc, char *argv[])
 		if (output == dsbds_output_count(scr))
 			errx(EXIT_FAILURE, "No such output %s", argv[0]);
 	}
+	if (oflag)
+		dsbds_set_off(scr, output);
+	if (pflag)
+		dsbds_set_primary(scr, output, primary);
+	if (mflag)
+		dsbds_set_mode(scr, output, mode);
 	if (Bflag)
 		dsbds_set_blanktime(scr, blanktime);
 	if (Dflag)
@@ -172,12 +178,6 @@ main(int argc, char *argv[])
 			errx(EXIT_FAILURE, "Failed to set LCD brightness");
 		(void)seteuid(getuid());
 	}
-	if (mflag)
-		dsbds_set_mode(scr, output, mode);
-	if (oflag)
-		dsbds_set_off(scr, output);
-	if (pflag)
-		dsbds_set_primary(scr, output, primary);
 	if (sflag)
 		dsbds_set_scale(scr, output, sx, sy);
 	return (EXIT_SUCCESS);
