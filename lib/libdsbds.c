@@ -75,7 +75,7 @@ enum BRIGHTNESS_METHOD {
 typedef struct panel_info_s {
 	int	     unit;
 	int	     method;
-	int	     levels[100];
+	int	     levels[101];
 	size_t	     nlevels;
 } panel_info;
 
@@ -530,7 +530,7 @@ get_backlight_level(panel_info *panel)
 	(void)fclose(fp);
 	if (p == NULL)
 		return (-1);
-	val = strtol(p, NULL, 10) % 100;
+	val = strtol(p, NULL, 10) % 101;
 	panel->levels[val] = val;
 
 	return (val);
@@ -569,7 +569,7 @@ set_backlight_level(panel_info *panel, int level)
 {
 	char cmd[sizeof(CMD_SET_BACKLIGHT) + 8];
 
-	level %= 100;
+	level %= 101;
 	(void)snprintf(cmd, sizeof(cmd), "%s %d", CMD_SET_BACKLIGHT, level);
 	if (system(cmd) != 0)
 		return (-1);
@@ -637,7 +637,7 @@ init_panel_info(int unit, panel_info *panel)
 static int
 init_acpi_video(int unit, panel_info *panel)
 {
-	int    buf[100], tmp;
+	int    buf[101], tmp;
 	char   oid[sizeof(LCD_LEVELS_OID)];
 	bool   sorted;
 	size_t n, i;
@@ -673,7 +673,7 @@ init_backlight(int unit, panel_info *panel)
 	if (get_backlight_level(panel) == -1)
 		return (-1);
 	panel->unit    = unit;
-	panel->nlevels = 100;
+	panel->nlevels = 101;
 	panel->method = BRIGHTNESS_METHOD_BACKLIGHT;
 
 	return (0);
