@@ -143,33 +143,26 @@ MainWin::createOutputList()
 QWidget *
 MainWin::createOutputTabs()
 {
-	int idx = -1, prop_cnt = 0;
+	int idx = -1, prio = 0, prio_max = 0;
 	QTabWidget *tabs = new QTabWidget;
 
 	createOutputList();
 
 	for (int i = 0; i < outputs.count(); i++) {
+		prio = 0;
 		QString label(dsbds_output_name(scr, i));
 		if (!dsbds_connected(scr, i))
 			outputs.at(i)->setEnabled(false);
 		tabs->addTab(outputs.at(i), label);
-		if (prop_cnt < 1) {
-				if (dsbds_connected(scr, i)) {
-					idx = i;
-					prop_cnt = 1;
-				}
-		}
-		if (prop_cnt < 2) {
-			if (dsbds_enabled(scr, i)) {
-				idx = i;
-				prop_cnt = 2;
-			}
-		}
-		if (prop_cnt < 3) {
-			if (dsbds_is_primary(scr, i)) {
-				idx = i;
-				prop_cnt = 3;
-			}
+		if (dsbds_connected(scr, i))
+			prio++;
+		if (prio > 0 && dsbds_enabled(scr, i))
+			prio++;
+		if (prio > 1 && dsbds_is_primary(scr, i))
+			prio++;
+		if (prio > prio_max) {
+			idx = i;
+			prio_max = prio;
 		}
 	}
 	tabs->setCurrentIndex(idx == -1 ? 0 : idx);
