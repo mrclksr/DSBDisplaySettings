@@ -4,7 +4,7 @@
 <context>
     <name>Brightness</name>
     <message>
-        <location filename="../src/brightness.cpp" line="40"/>
+        <location filename="../src/brightness.cpp" line="46"/>
         <source>Software brightness</source>
         <translation>Luminosité logiciel</translation>
     </message>
@@ -28,66 +28,80 @@
 <context>
     <name>LCDBrightness</name>
     <message>
-        <location filename="../src/lcdbrightness.cpp" line="40"/>
         <source>LCD brightness level</source>
-        <translation>Niveau de luminosité LCD</translation>
+        <translation type="vanished">Niveau de luminosité LCD</translation>
+    </message>
+    <message>
+        <location filename="../src/lcdbrightness.cpp" line="41"/>
+        <source>Brightness</source>
+        <translation type="unfinished">Luminosité</translation>
     </message>
 </context>
 <context>
     <name>MainWin</name>
     <message>
-        <location filename="../src/mainwin.cpp" line="68"/>
+        <location filename="../src/mainwin.cpp" line="72"/>
         <source>DPMS</source>
         <translation>DPMS</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="69"/>
+        <location filename="../src/mainwin.cpp" line="73"/>
         <source>Blanktime</source>
         <translation>Écran vide</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="70"/>
+        <location filename="../src/mainwin.cpp" line="74"/>
         <source>DPI</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="75"/>
-        <location filename="../src/mainwin.cpp" line="218"/>
+        <location filename="../src/mainwin.cpp" line="79"/>
+        <location filename="../src/mainwin.cpp" line="244"/>
         <source>&amp;Save</source>
         <translation>&amp;Sauvegarder</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="76"/>
+        <location filename="../src/mainwin.cpp" line="80"/>
         <source>&amp;Quit</source>
         <translation>&amp;Quitter</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="174"/>
+        <location filename="../src/mainwin.cpp" line="92"/>
+        <source>Screen Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/mainwin.cpp" line="93"/>
+        <source>Output Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/mainwin.cpp" line="198"/>
         <source>Saved</source>
         <translation>Sauvegardé</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="212"/>
+        <location filename="../src/mainwin.cpp" line="238"/>
         <source>Settings have been changed</source>
         <translation>Les paramètres ont été modifiés</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="213"/>
+        <location filename="../src/mainwin.cpp" line="239"/>
         <source>Settings changed</source>
         <translation>Paramètres modifiés</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="214"/>
+        <location filename="../src/mainwin.cpp" line="240"/>
         <source>Do you want to save your changes?</source>
         <translation>Voulez-vous sauvegarder vos changements ?</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="220"/>
+        <location filename="../src/mainwin.cpp" line="246"/>
         <source>&amp;Quit without saving</source>
         <translation>&amp;Quitter sans sauvegarder</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="221"/>
+        <location filename="../src/mainwin.cpp" line="247"/>
         <source>&amp;Cancel</source>
         <translation>&amp;Cancel</translation>
     </message>
@@ -131,9 +145,16 @@
         <translation>Luminosité</translation>
     </message>
     <message>
-        <location filename="../src/output.cpp" line="32"/>
         <source>Enable/Disable</source>
-        <translation>Activer/Désactiver</translation>
+        <translation type="vanished">Activer/Désactiver</translation>
+    </message>
+</context>
+<context>
+    <name>Primary</name>
+    <message>
+        <location filename="../src/primary.cpp" line="9"/>
+        <source>Primary Monitor</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
