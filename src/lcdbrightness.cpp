@@ -38,7 +38,7 @@ LCDBrightness::LCDBrightness(dsbds_scr *scr, int output, QWidget *parent)
 	this->scr    = scr;
 	this->output = output;
 	slider	     = new Slider(Qt::Horizontal,
-				  QString(tr("LCD brightness level")), 0,
+				  QString(tr("Brightness")), 0,
 				  nlevels - 1, level);
 	connect(slider, SIGNAL(valChanged(int)), this,
 	    SLOT(setBrightness(int)));
