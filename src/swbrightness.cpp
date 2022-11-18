@@ -21,33 +21,38 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _BRIGHTNESS_H_
-#define _BRIGHTNESS_H_ 1
-#include <QGroupBox>
 
-#include "dsbds.h"
-#include "lcdbrightness.h"
+#include <QVBoxLayout>
+
 #include "swbrightness.h"
 
-class Brightness : public QGroupBox
+SWBrightness::SWBrightness(dsbds_scr *scr, int output,
+	QWidget *parent) : QWidget(parent)
 {
-	Q_OBJECT
-public:
-	Brightness(const QString &title, dsbds_scr * scr, int output,
-	    QWidget *parent = 0);
-	void update(void);
-signals:
-	void changed();
-/*
-private slots:
-	void (*setBrightness)(int val);
-*/
-private:
-	int	   output;
-	bool isPanel = false;
-	dsbds_scr *scr;
-	LCDBrightness *lcdBrightness;
-	SWBrightness *swBrightness;
-};
-#endif
+	this->scr    = scr;
+	this->output = output;
+	QVBoxLayout *vbox = new QVBoxLayout(parent);
+	brightness = dsbds_get_brightness(scr, output);
+	if (brightness <= 0)
+		brightness = 0;
+	slider = new Slider(Qt::Horizontal, QString(tr("Software brightness")),
+				0, 100, (int)(brightness * 100), 1);
+	connect(slider, SIGNAL(valChanged(int)), this,
+	    SLOT(setBrightness(int)));
+	vbox->addWidget(slider);
+	vbox->addStretch(1);
+	setLayout(vbox);
+}
+
+void SWBrightness::setBrightness(int value)
+{
+	dsbds_set_brightness(scr, output, (double)value / 100);
+	emit changed();
+}
+
+void SWBrightness::update()
+{
+	brightness = dsbds_get_brightness(scr, output);
+	slider->setVal((int)(brightness * 100));
+}
 

@@ -11,6 +11,7 @@ INCLUDEPATH += . ../lib
 HEADERS += ../lib/libdsbds.h \
            blanktime.h \
            brightness.h \
+	   swbrightness.h \
            dpms.h \
            gamma.h \
            lcdbrightness.h \
@@ -27,6 +28,7 @@ HEADERS += ../lib/libdsbds.h \
 SOURCES += ../lib/libdsbds.c \
            blanktime.cpp \
            brightness.cpp \
+	   swbrightness.cpp \
            dpms.cpp \
            gamma.cpp \
            lcdbrightness.cpp \

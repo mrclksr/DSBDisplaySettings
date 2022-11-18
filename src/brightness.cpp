@@ -22,10 +22,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <QLabel>
-#include <QGridLayout>
-#include <QSpinBox>
-#include <QCheckBox>
+#include <QVBoxLayout>
 
 #include "brightness.h"
 
@@ -37,31 +34,23 @@ Brightness::Brightness(const QString &title, dsbds_scr *scr, int output,
 
 	QVBoxLayout *vbox = new QVBoxLayout(parent);
 	vbox->addStretch(1);
-	if (dsbds_is_panel(scr, output)) {
-		vbox->addWidget(new LCDBrightness(scr, output));
+	isPanel = dsbds_is_panel(scr, output);
+	if (isPanel) {
+		lcdBrightness = new LCDBrightness(scr, output);
+		vbox->addWidget(lcdBrightness);
 	} else {
-		brightness = dsbds_get_brightness(scr, output);
-		if (brightness <= 0)
-			brightness = 0;
-		slider = new Slider(Qt::Horizontal, QString(tr("Software brightness")),
-							0, 100, (int)(brightness * 100), 1);
-		connect(slider, SIGNAL(valChanged(int)), this,
-			SLOT(setBrightness(int)));
-		vbox->addWidget(slider);
+		swBrightness = new SWBrightness(scr, output);
+		vbox->addWidget(swBrightness);
 	}
 	vbox->addStretch(1);
 	setLayout(vbox);
 }
 
-void Brightness::setBrightness(int value)
-{
-	dsbds_set_brightness(scr, output, (double)value / 100);
-	emit changed();
-}
-
 void Brightness::update()
 {
-	brightness = dsbds_get_brightness(scr, output);
-	slider->setVal((int)(brightness * 100));
+	if (isPanel)
+		lcdBrightness->update();
+	else
+		swBrightness->update();
 }
 

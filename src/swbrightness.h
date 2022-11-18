@@ -21,33 +21,28 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _BRIGHTNESS_H_
-#define _BRIGHTNESS_H_ 1
-#include <QGroupBox>
-
+#ifndef _SWBRIGHTNESS_H_
+#define _SWBRIGHTNESS_H_ 1
 #include "dsbds.h"
-#include "lcdbrightness.h"
-#include "swbrightness.h"
+#include "slider.h"
 
-class Brightness : public QGroupBox
+class SWBrightness : public QWidget
 {
 	Q_OBJECT
 public:
-	Brightness(const QString &title, dsbds_scr * scr, int output,
-	    QWidget *parent = 0);
+	SWBrightness(dsbds_scr * scr, int output, QWidget *parent = 0);
 	void update(void);
 signals:
 	void changed();
-/*
 private slots:
-	void (*setBrightness)(int val);
-*/
+	void setBrightness(int val);
 private:
-	int	   output;
-	bool isPanel = false;
+	int	  output;
+	int	  level;
+	Slider	  *slider;
 	dsbds_scr *scr;
-	LCDBrightness *lcdBrightness;
-	SWBrightness *swBrightness;
+public:
+	double brightness;
 };
 #endif
 
