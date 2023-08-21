@@ -32,6 +32,24 @@
 #include "../libdsbds.h"
 
 static void
+set_dpms(dsbds_scr *scr, bool enable, int standby, int suspend, int off)
+{
+	int  standby_cur, suspend_cur, off_cur, tries;
+	bool enable_cur;
+
+	for (tries = 0; tries < 5; tries++) {
+		dsbds_set_dpms_enabled(scr, enable);
+		dsbds_set_dpms_timeouts(scr, standby, suspend, off);
+		dsbds_get_dpms_info(scr, &enable_cur, &standby_cur,
+		    &suspend_cur, &off_cur);
+		if (enable == enable_cur && standby == standby_cur &&
+		    suspend == suspend_cur && off == off_cur)
+			break;
+		(void)sleep(1);
+	}
+}
+
+static void
 usage()
 {
 	(void)printf("Usage: dsbds_backend -o output\n"		\
@@ -165,8 +183,8 @@ main(int argc, char *argv[])
 		dsbds_set_brightness(scr, output, brightness);
 	}
 	if (dflag) {
-		dsbds_set_dpms_enabled(scr, dpms[0] != 0 ? true : false);
-		dsbds_set_dpms_timeouts(scr, dpms[1], dpms[2], dpms[3]);
+		set_dpms(scr, dpms[0] != 0 ? true : false,
+		    dpms[1], dpms[2], dpms[3]);
 	}
 	if (gflag) {
 		for (i = 0; i < 3; i++)
