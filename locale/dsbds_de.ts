@@ -4,9 +4,8 @@
 <context>
     <name>Brightness</name>
     <message>
-        <location filename="../src/brightness.cpp" line="46"/>
         <source>Software brightness</source>
-        <translation>Pseudo-Helligkeit</translation>
+        <translation type="vanished">Pseudo-Helligkeit</translation>
     </message>
 </context>
 <context>
@@ -155,6 +154,14 @@
         <location filename="../src/primary.cpp" line="9"/>
         <source>Primary Monitor</source>
         <translation>Primärer Monitor</translation>
+    </message>
+</context>
+<context>
+    <name>SWBrightness</name>
+    <message>
+        <location filename="../src/swbrightness.cpp" line="38"/>
+        <source>Software brightness</source>
+        <translation>Pseudo-Helligkeit</translation>
     </message>
 </context>
 <context>
