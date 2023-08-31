@@ -38,6 +38,8 @@
 #include "qt-helper/qt-helper.h"
 
 struct scr_settings_s {
+	int    x;
+	int    y;
 	int    lcdbrightness;
 	int    mode;
 	bool   primary;
@@ -68,10 +70,11 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent) {
 	QIcon qicon	  = qh_loadStockIcon(QStyle::SP_DialogCloseButton);
 	QTabWidget *tabs  = new QTabWidget;
 	QWidget *outputTabs = createOutputTabs();
+	layoutTab	  = new Layout(scr, this);
 	QWidget	    *page = new QWidget;
 	DPMS	    *dpms = new DPMS(QString(tr("DPMS")), scr);
 	Blanktime   *bt	  = new Blanktime(QString(tr("Blanktime")), scr);
-	DPI			*dpi  = new DPI(QString(tr("DPI")), scr);
+	DPI	    *dpi  = new DPI(QString(tr("DPI")), scr);
 	QWidget	    *w	  = new QWidget(parent);
 	QHBoxLayout *bbox = new QHBoxLayout;
 	QVBoxLayout *vbox = new QVBoxLayout;
@@ -91,7 +94,7 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent) {
 	page->setLayout(vbox);
 	tabs->addTab(page, tr("Screen Settings"));
 	tabs->addTab(outputTabs, tr("Output Settings"));
-
+	tabs->addTab(layoutTab, tr("Layout"));
 	layout->addWidget(tabs);
 	layout->addLayout(bbox);
 	w->setLayout(layout);
@@ -127,6 +130,8 @@ MainWin::updateSettings()
 		settings.ss[i].sy = dsbds_get_yscale(scr, i);
 		settings.ss[i].primary = dsbds_is_primary(scr, i);
 		settings.ss[i].enabled = dsbds_enabled(scr, i);
+		settings.ss[i].x = dsbds_get_x_pos(scr, i);
+		settings.ss[i].y = dsbds_get_y_pos(scr, i);
 	}
 }
 
@@ -187,6 +192,7 @@ MainWin::updateOutputs()
 {
 	for (int i = 0; i < outputs.count(); i++)
 		outputs.at(i)->update();
+	layoutTab->update();
 }
 
 void
@@ -227,7 +233,9 @@ MainWin::quitSlot()
 		    settings.ss[i].sx       != dsbds_get_xscale(scr, i) ||
 		    settings.ss[i].sy       != dsbds_get_yscale(scr, i) ||
 		    settings.ss[i].primary  != dsbds_is_primary(scr, i) ||
-		    settings.ss[i].enabled  != dsbds_enabled(scr, i)) {
+		    settings.ss[i].enabled  != dsbds_enabled(scr, i)    ||
+		    settings.ss[i].x != dsbds_get_x_pos(scr, i)         ||
+		    settings.ss[i].y != dsbds_get_y_pos(scr, i)) {
 			changed = true;
 		}
 	}

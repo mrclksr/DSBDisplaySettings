@@ -23,6 +23,8 @@ HEADERS += ../lib/libdsbds.h \
 	   scale.h \
 	   dpi.h \
 	   primary.h \
+	   layout.h \
+	   outputrect.h \
            ../lib/qt-helper/qt-helper.h \
 	   ../lib/dsbcfg/dsbcfg.h
 SOURCES += ../lib/libdsbds.c \
@@ -41,6 +43,8 @@ SOURCES += ../lib/libdsbds.c \
 	   scale.cpp \
 	   dpi.cpp \
 	   primary.cpp \
+	   layout.cpp \
+	   outputrect.cpp \
 	   ../lib/dsbcfg/dsbcfg.c \
            ../lib/qt-helper/qt-helper.cpp
 

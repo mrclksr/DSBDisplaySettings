@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2016 Marcel Kaiser. All rights reserved.
+ * Copyright (c) 2023 Marcel Kaiser. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -21,37 +21,30 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#ifndef MAINWIN_H
-#define MAINWIN_H 1
+#pragma once
+#ifndef _LAYOUT_H_
+#define _LAYOUT_H_ 1
 #include <QWidget>
-#include <QMainWindow>
-#include <QCloseEvent>
-#include <QMoveEvent>
+#include <QList>
+#include <QGraphicsScene>
 
-#include "output.h"
-#include "layout.h"
+#include "outputrect.h"
 
-class MainWin : public QMainWindow
+class Layout : public QWidget
 {
 	Q_OBJECT
 public:
-	MainWin(QWidget *parent = 0);
-
+	Layout(dsbds_scr *scr, QWidget *parent = 0);
+	void update(void);
+signals:
+	void changed(void);
 private slots:
-	void quit();
-	void quitSlot();
-	void saveSlot();
-	void closeEvent(QCloseEvent *event);
-	void updateOutputs();
+	void emitChanged(void);
+	void changeLayout(void);
 private:
-	void createOutputList();
-	void updateSettings();
-	QWidget *createOutputTabs();
-private:
-	QIcon	      quitIcon;
-	Layout	     *layoutTab;
-	QList<Output *>outputs;
-	dsbds_scr *scr;
+	qreal	       scaleFactor = 0.125;
+	dsbds_scr      *scr;
+	QGraphicsScene *scene;
+	QList<OutputRect *> outrects;
 };
-#endif // MAINWIN_H
+#endif

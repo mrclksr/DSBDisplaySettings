@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2016 Marcel Kaiser. All rights reserved.
+ * Copyright (c) 2023 Marcel Kaiser. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -21,37 +21,24 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _OUTPUTRECT_H_
+#define _OUTPUTRECT_H_ 1
+#include <QGraphicsRectItem>
+#include <QPointF>
 
-#ifndef MAINWIN_H
-#define MAINWIN_H 1
-#include <QWidget>
-#include <QMainWindow>
-#include <QCloseEvent>
-#include <QMoveEvent>
+#include "dsbds.h"
 
-#include "output.h"
-#include "layout.h"
-
-class MainWin : public QMainWindow
+class OutputRect : public QGraphicsRectItem
 {
-	Q_OBJECT
 public:
-	MainWin(QWidget *parent = 0);
+	OutputRect(dsbds_scr *scr, int output, qreal scaleFactor,
+		QColor color, QGraphicsItem *parent = 0);
+	QPointF realPos(void);
+protected:
+	QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
-private slots:
-	void quit();
-	void quitSlot();
-	void saveSlot();
-	void closeEvent(QCloseEvent *event);
-	void updateOutputs();
-private:
-	void createOutputList();
-	void updateSettings();
-	QWidget *createOutputTabs();
-private:
-	QIcon	      quitIcon;
-	Layout	     *layoutTab;
-	QList<Output *>outputs;
-	dsbds_scr *scr;
+public:
+	int   output;
+	qreal scaleFactor;
 };
-#endif // MAINWIN_H
+#endif

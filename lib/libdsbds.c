@@ -58,6 +58,7 @@
 #define CMD_XRANDR_DPI		PATH_XRANDR " --dpi %d"
 #define CMD_XRANDR_PRIMARY	PATH_XRANDR " --output %s --primary"
 #define CMD_XRANDR_NO_PRIMARY	PATH_XRANDR " --output %s --noprimary"
+#define CMD_XRANDR_POS		PATH_XRANDR " --output %s --pos %dx%d"
 #define CMD_XDPYINFO		PATH_XDPYINFO
 #define CMD_GET_BACKLIGHT	"/usr/bin/backlight -q"
 #define CMD_SET_BACKLIGHT	"/usr/bin/backlight"
@@ -88,6 +89,10 @@ typedef struct dsbds_output_s {
 	int	     id;
 	int	     curmode;
 	int	     preferred;
+	int	     x;
+	int	     y;
+	int	     width;
+	int	     height;
 	bool	     connected;
 	bool	     is_panel;
 	bool	     primary;
@@ -499,6 +504,57 @@ dsbds_get_lcd_brightness_level(dsbds_scr *scr, int output)
 	return (-1);
 }
 
+int
+dsbds_get_scr_width(dsbds_scr *scr)
+{
+	return (DisplayWidth(scr->display, scr->screen));
+}
+
+int
+dsbds_get_scr_height(dsbds_scr *scr)
+{
+	return (DisplayHeight(scr->display, scr->screen));
+}
+
+int
+dsbds_output_width(dsbds_scr *scr, int output)
+{
+	return (scr->outputs[output].width);
+}
+
+int
+dsbds_output_height(dsbds_scr *scr, int output)
+{
+	return (scr->outputs[output].height);
+}
+
+int
+dsbds_get_x_pos(dsbds_scr *scr, int output)
+{
+	return (scr->outputs[output].x);
+}
+
+int
+dsbds_get_y_pos(dsbds_scr *scr, int output)
+{
+	return (scr->outputs[output].y);
+}
+
+int
+dsbds_set_pos(dsbds_scr *scr, int output, int x, int y)
+{
+	char cmd[sizeof(CMD_XRANDR_POS) + 24];
+
+	(void)snprintf(cmd, sizeof(cmd) - 1, CMD_XRANDR_POS,
+	    scr->outputs[output].name, x, y);
+	if (system(cmd) == 0) {
+		dsbds_update_screen(scr);
+		if (scr->outputs[output].x == x && scr->outputs[output].y == y)
+			return (0);
+	}
+	return (-1);
+}
+
 static int
 get_acpi_video_brightness_level(panel_info *panel)
 {
@@ -761,7 +817,7 @@ open_tempfile(char **path)
 static int
 update_screen(dsbds_scr *scr)
 {
-	int	error;
+	int    error;
 	char   ln[1024], *p, *q;
 	bool   found_screen;
 	FILE   *fp;
@@ -792,6 +848,10 @@ update_screen(dsbds_scr *scr)
 			scr->outputs[no].nmodes = 0;
 			scr->outputs[no].curmode   = -1;
 			scr->outputs[no].preferred = -1;
+			scr->outputs[no].x = 0;
+			scr->outputs[no].y = 0;
+			scr->outputs[no].width = 0;
+			scr->outputs[no].height = 0;
 			CHECKNULL(p = strtok(ln, " "));
 			(void)strncpy(scr->outputs[no].name, p,
 			    sizeof(scr->outputs[no].name) - 1);
@@ -805,6 +865,13 @@ update_screen(dsbds_scr *scr)
 				scr->outputs[no].primary = true;
 			else
 				scr->outputs[no].primary = false;
+			if (scr->outputs[no].primary) {
+				/* Skip to crtc info */
+				CHECKNULL(p = strtok(NULL, " "));
+			}
+			(void)sscanf(p, "%d%*c%d%*c%d%*c%d",
+			    &scr->outputs[no].width, &scr->outputs[no].height,
+			    &scr->outputs[no].x, &scr->outputs[no].y);
 		} else if (ln[0] == '\t') {
 			CHECKNULL(p = strtok(ln + 1, " "));
 			if ((q = strtok(NULL, " ")) == NULL)
@@ -813,26 +880,31 @@ update_screen(dsbds_scr *scr)
 				CHECKNULL(p = strtok(q, ":"));
 				scr->outputs[no].id = strtol(p, NULL, 16);
 			} else if (strcmp(p, "Gamma:") == 0) {
-				CHECKNULL(p = strtok(q, ":"));
-				scr->outputs[no].red = strtod(p, NULL);
-				CHECKNULL(p = strtok(NULL, ":"));
-				scr->outputs[no].green = strtod(p, NULL);
-				CHECKNULL(p = strtok(NULL, ":"));
-				scr->outputs[no].blue = strtod(p, NULL);
+				sscanf(q, "%lf:%lf:%lf",
+				    &scr->outputs[no].red,
+				    &scr->outputs[no].green,
+				    &scr->outputs[no].blue);
 			} else if (strcmp(p, "Brightness:") == 0) {
 				scr->outputs[no].brightness = strtod(q, NULL);
 			} else if (strcmp(p, "Transform:") == 0) {
 				CHECKNULL(p = strtok(q, ": "));
-				scr->outputs[no].sx = strtod(p, NULL);
+				if (sscanf(p, "%lf %*lf %*lf",
+				    &scr->outputs[no].sx) != 1) {
+					warnx("Unexpected transform " \
+					      "matrix format: %s", p);
+					return (-1);
+				}
 				if (fgets(ln, sizeof(ln), fp) == NULL) {
 					warn("Unexpected end of output");
 					return (-1);
 				}
 				lc++;
-				CHECKNULL(p = strtok(ln + 1, " "));
-				CHECKNULL(q = strtok(NULL, " "));
-				CHECKNULL(p = strtok(q, " "));
-				scr->outputs[no].sy = strtod(p, NULL);
+				if (sscanf(ln, "%*lf %lf %*lf",
+				    &scr->outputs[no].sy) != 1) {
+					warnx("Unexpected transform " \
+					      "matrix format: %s", p);
+					return (-1);
+				}
 			}
 		} else if (strncmp(ln, "        v:", 10) == 0) {
 			p = ln + strlen(ln);
@@ -946,6 +1018,13 @@ dsbds_save_settings(dsbds_scr *scr)
 	for (i = 0; i < dsbds_output_count(scr); i++) {
 		if (!dsbds_connected(scr, i))
 			continue;
+		(void)fprintf(fp, "%s -P %dx%d %s\n", PATH_BACKEND,
+		    dsbds_get_x_pos(scr, i), dsbds_get_y_pos(scr, i),
+		    dsbds_output_name(scr, i));
+	}
+	for (i = 0; i < dsbds_output_count(scr); i++) {
+		if (!dsbds_connected(scr, i))
+			continue;
 		if (!dsbds_enabled(scr, i)) {
 			ret = fprintf(fp, "%s -o %s\n", PATH_BACKEND,
 			    dsbds_output_name(scr, i));
@@ -993,3 +1072,4 @@ dsbds_save_settings(dsbds_scr *scr)
 
 	return (0);
 }
+
