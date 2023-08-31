@@ -25,8 +25,6 @@
 #include <QGraphicsSimpleTextItem>
 #include <QGraphicsScene>
 
-#include <QDebug>
-
 #include "outputrect.h"
 
 OutputRect::OutputRect(dsbds_scr *scr, int output, qreal scaleFactor,
