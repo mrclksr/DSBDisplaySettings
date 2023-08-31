@@ -37,70 +37,83 @@
     </message>
 </context>
 <context>
+    <name>Layout</name>
+    <message>
+        <location filename="../src/layout.cpp" line="40"/>
+        <source>&amp;Apply</source>
+        <translation>&amp;Anwenden</translation>
+    </message>
+</context>
+<context>
     <name>MainWin</name>
     <message>
-        <location filename="../src/mainwin.cpp" line="72"/>
+        <location filename="../src/mainwin.cpp" line="75"/>
         <source>DPMS</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="73"/>
+        <location filename="../src/mainwin.cpp" line="76"/>
         <source>Blanktime</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="74"/>
+        <location filename="../src/mainwin.cpp" line="77"/>
         <source>DPI</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="79"/>
-        <location filename="../src/mainwin.cpp" line="244"/>
+        <location filename="../src/mainwin.cpp" line="82"/>
+        <location filename="../src/mainwin.cpp" line="252"/>
         <source>&amp;Save</source>
         <translation>&amp;Speichern</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="80"/>
+        <location filename="../src/mainwin.cpp" line="83"/>
         <source>&amp;Quit</source>
         <translation>&amp;Beenden</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="92"/>
+        <location filename="../src/mainwin.cpp" line="95"/>
         <source>Screen Settings</source>
         <translation>Bildschirm-Einstellungen</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="93"/>
+        <location filename="../src/mainwin.cpp" line="96"/>
         <source>Output Settings</source>
         <translation>Ausgabe-Einstellungen</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="198"/>
+        <location filename="../src/mainwin.cpp" line="97"/>
+        <source>Layout</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../src/mainwin.cpp" line="204"/>
         <source>Saved</source>
         <translation>Gespeichert</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="238"/>
+        <location filename="../src/mainwin.cpp" line="246"/>
         <source>Settings have been changed</source>
         <translation>Einstellungen wurden geändert</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="239"/>
+        <location filename="../src/mainwin.cpp" line="247"/>
         <source>Settings changed</source>
         <translation>Einstellungen geändert</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="240"/>
+        <location filename="../src/mainwin.cpp" line="248"/>
         <source>Do you want to save your changes?</source>
         <translation>Möchten Sie die Änderungen speichern?</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="246"/>
+        <location filename="../src/mainwin.cpp" line="254"/>
         <source>&amp;Quit without saving</source>
         <translation>&amp;Beenden ohne zu speichern</translation>
     </message>
     <message>
-        <location filename="../src/mainwin.cpp" line="247"/>
+        <location filename="../src/mainwin.cpp" line="255"/>
         <source>&amp;Cancel</source>
         <translation>&amp;Abbrechen</translation>
     </message>
