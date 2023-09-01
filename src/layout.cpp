@@ -70,7 +70,7 @@ void Layout::update()
 		if (!dsbds_enabled(scr, i))
 			continue;
 		QColor color(rgb, rgb, rgb, 180);
-		rgb += 30; rgb %= 255;
+		rgb += 30; rgb %= 256;
 		if (rgb < 60)
 			rgb = 60;
 		width += (qreal)dsbds_output_width(scr, i);
