@@ -974,8 +974,7 @@ dsbds_get_dpi(dsbds_scr *scr)
 		if (strncmp(ln + idx, "resolution:", 11) != 0)
 			continue;
 		idx += 11;
-		idx += strcspn(ln + idx, "0123456789");
-		scr->dpi = strtol(ln + idx, NULL, 10);
+		(void)sscanf(ln + idx, "%d", &scr->dpi);
 		break;
 	}
 	(void)fclose(fp);
